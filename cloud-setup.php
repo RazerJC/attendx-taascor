@@ -35,10 +35,16 @@ $hasError = false;
 try {
     // Connect to MySQL server
     $dsn = "mysql:host={$host};port={$port};charset=utf8mb4";
-    $pdo = new PDO($dsn, $user, $pass, [
+    $options = [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    ]);
+    ];
+    // Enable SSL for cloud databases (TiDB Cloud requires TLS)
+    if ($host !== 'localhost' && $host !== '127.0.0.1') {
+        $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+        $options[PDO::MYSQL_ATTR_SSL_CA] = '';
+    }
+    $pdo = new PDO($dsn, $user, $pass, $options);
     $results[] = ['status' => 'success', 'message' => 'Connected to MySQL server'];
 
     // Create database if not exists
