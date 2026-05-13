@@ -1,0 +1,39 @@
+# OS files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+
+# Batch files (local only)
+*.bat
+
+# Docs/instruction files (not needed online)
+00_START_HERE_READ_THIS.txt
+ALL_DONE_READ_THIS.txt
+COMPLETE.txt
+DELIVERY_SUMMARY.txt
+EXECUTE_NOW.txt
+EXECUTION_INSTRUCTIONS_FINAL.txt
+EXECUTION_READY.txt
+FILE_LISTING_AND_CHECKLIST.txt
+FINAL_INSTRUCTIONS.txt
+FINAL_SUMMARY.txt
+HOW_TO_EXECUTE_ORGANIZATION.txt
+INDEX_AND_QUICK_START.txt
+PROCESSING_INSTRUCTIONS.md
+PROJECT_COMPLETE.txt
+PROJECT_COMPLETION_SUMMARY.txt
+QUICK_REFERENCE.txt
+READY_TO_RUN.txt
+SETUP_COMPLETE.txt
+START_HERE_FINAL.txt
+SYSTEM_READY.txt
+
+# Excel imports (large files)
+*.xlsx
+
+# Antigravity
+.antigravityignore

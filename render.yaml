@@ -1,0 +1,22 @@
+# render.yaml — Render.com Blueprint for AttendX For TAASCOR
+# Deploy via: https://render.com/deploy
+
+services:
+  - type: web
+    name: attendx-taascor
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DB_HOST
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASS
+        sync: false
+      - key: DB_PORT
+        value: "3306"
+      - key: SETUP_KEY
+        generateValue: true

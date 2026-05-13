@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Attendance Organization System</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 700px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            font-size: 18px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .info-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            line-height: 1.6;
+        }
+        
+        .info-box strong {
+            color: #667eea;
+        }
+        
+        .step {
+            background: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 12px;
+            border-radius: 4px;
+            border-left: 4px solid #764ba2;
+        }
+        
+        .step-number {
+            display: inline-block;
+            background: #764ba2;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            flex: 1;
+            min-width: 150px;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            border: 2px solid #ddd;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+            border-color: #999;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .feature-list li {
+            padding: 8px 0;
+            color: #555;
+        }
+        
+        .feature-list li:before {
+            content: "✓ ";
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        
+        .status {
+            display: inline-block;
+            background: #d4edda;
+            color: #155724;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Attendance Organization System</h1>
+        <p class="subtitle">Organize master attendance file by department</p>
+        
+        <!-- Status Section -->
+        <div class="section">
+            <div class="info-box">
+                <strong>✓ System Status: READY</strong>
+                <br>Master file: coordinator/Master File Bi Chain Mamatid 2026 (1).xlsx
+                <br>Processing time: < 1 minute
+            </div>
+        </div>
+        
+        <!-- What It Does -->
+        <div class="section">
+            <h2>What It Does</h2>
+            <ul class="feature-list">
+                <li>Reads master attendance Excel file</li>
+                <li>Identifies all unique departments</li>
+                <li>Creates folder for each department</li>
+                <li>Generates [Department]_attendance.xlsx</li>
+                <li>Preserves original file (safe!)</li>
+            </ul>
+        </div>
+        
+        <!-- How to Execute -->
+        <div class="section">
+            <h2>How to Execute</h2>
+            
+            <div class="step">
+                <span class="step-number">1</span>
+                <strong>Option A: Web Interface</strong>
+                <p style="margin-top: 5px; color: #666;">Click "Process Now" button below to run via browser</p>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">2</span>
+                <strong>Option B: Command Line</strong>
+                <p style="margin-top: 5px; color: #666;">
+                    Open Command Prompt and run:<br>
+                    <code style="background: #f0f0f0; padding: 5px; border-radius: 3px;">python organize_by_department.py</code>
+                </p>
+            </div>
+            
+            <div class="step">
+                <span class="step-number">3</span>
+                <strong>Option C: Batch File</strong>
+                <p style="margin-top: 5px; color: #666;">Double-click: START_HERE.bat</p>
+            </div>
+        </div>
+        
+        <!-- What You Get -->
+        <div class="section">
+            <h2>Result After Processing</h2>
+            <div style="background: #f9f9f9; padding: 15px; border-radius: 4px; font-family: monospace; font-size: 12px; line-height: 1.6;">
+                ATTENDANCE/<br>
+                ├─ Admin/<br>
+                │  └─ Admin_attendance.xlsx<br>
+                ├─ Finance/<br>
+                │  └─ Finance_attendance.xlsx<br>
+                ├─ HR/<br>
+                │  └─ HR_attendance.xlsx<br>
+                └─ ... (one per department)
+            </div>
+        </div>
+        
+        <!-- Requirements -->
+        <div class="section">
+            <h2>Requirements</h2>
+            <div class="warning">
+                <strong>⚠ Python Required:</strong> Python 3.6+ must be installed
+                <br>Install: <a href="https://www.python.org/downloads/" target="_blank">python.org</a>
+                <br>Library: openpyxl (run: <code>pip install openpyxl</code>)
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="buttons">
+            <button class="btn btn-primary" onclick="processNow()">▶ Process Now (Web)</button>
+            <a href="execute_organization.php" class="btn btn-secondary">Web Interface</a>
+        </div>
+        
+        <div class="status">
+            ✓ All systems ready - Ready to process
+        </div>
+    </div>
+    
+    <script>
+        function processNow() {
+            window.location.href = 'execute_organization.php?action=process';
+        }
+    </script>
+</body>
+</html>
