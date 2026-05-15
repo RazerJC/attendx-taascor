@@ -89,7 +89,7 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
     <div class="stat-card">
         <div class="stat-value text-red-400"><?= $summary['absent'] ?></div>
-        <div class="stat-label">Absent</div>\
+        <div class="stat-label">Absent</div>
     </div>
     <div class="stat-card">
         <div class="stat-value text-yellow-400"><?= $summary['late'] ?></div>
