@@ -33,13 +33,12 @@ $results = [];
 $hasError = false;
 
 try {
-    // Connect to MySQL server
+    // First try to create database (may fail on managed services like TiDB Cloud)
     $dsn = "mysql:host={$host};port={$port};charset=utf8mb4";
     $options = [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     ];
-    // Enable SSL for cloud databases (TiDB Cloud requires TLS)
     if ($host !== 'localhost' && $host !== '127.0.0.1') {
         $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
         $options[PDO::MYSQL_ATTR_SSL_CA] = '';
@@ -47,10 +46,18 @@ try {
     $pdo = new PDO($dsn, $user, $pass, $options);
     $results[] = ['status' => 'success', 'message' => 'Connected to MySQL server'];
 
-    // Create database if not exists
-    $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbname}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-    $pdo->exec("USE `{$dbname}`");
-    $results[] = ['status' => 'success', 'message' => "Database '{$dbname}' ready"];
+    // Try to create database (may fail on TiDB Cloud - that's OK)
+    try {
+        $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$dbname}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+        $results[] = ['status' => 'success', 'message' => "Database '{$dbname}' created/verified"];
+    } catch (Exception $dbErr) {
+        $results[] = ['status' => 'info', 'message' => "Skipped CREATE DATABASE: " . $dbErr->getMessage()];
+    }
+
+    // Connect directly to the target database
+    $dsn2 = "mysql:host={$host};port={$port};dbname={$dbname};charset=utf8mb4";
+    $pdo = new PDO($dsn2, $user, $pass, $options);
+    $results[] = ['status' => 'success', 'message' => "Connected to database '{$dbname}'"];
 
     // Read and execute SQL schema
     $schemaFile = __DIR__ . '/init-database.sql';
