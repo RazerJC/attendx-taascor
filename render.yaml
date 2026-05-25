@@ -2,11 +2,13 @@
 # Deploy via: https://render.com/deploy
 
 services:
+  # ── Main Web Service ──────────────────────────────────────────
   - type: web
     name: attendx-taascor
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile
+    healthCheckPath: /ATTENDANCE/health.php
     envVars:
       - key: DB_HOST
         sync: false
@@ -20,3 +22,12 @@ services:
         value: "3306"
       - key: SETUP_KEY
         generateValue: true
+
+  # ── Keep-Alive Cron (pings the web service every 14 min) ─────
+  - type: cron
+    name: attendx-keepalive
+    runtime: image
+    image:
+      url: curlimages/curl:8.11.1
+    schedule: "*/14 * * * *"
+    startCommand: "curl -sf https://attendx-taascor.onrender.com/ATTENDANCE/health.php || true"
