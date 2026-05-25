@@ -7,7 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // --- Database (env vars for Render.com, fallback for local XAMPP) ---
-define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
+define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
 define('DB_NAME', getenv('DB_NAME') ?: 'taascor_attendance');
 define('DB_USER', getenv('DB_USER') ?: 'root');
 define('DB_PASS', getenv('DB_PASS') ?: '');
@@ -25,7 +25,7 @@ function getDB() {
                 PDO::ATTR_EMULATE_PREPARES   => false,
             ];
             // Enable SSL for cloud databases (TiDB Cloud requires TLS)
-            if (DB_HOST !== 'localhost' && DB_HOST !== '127.0.0.1') {
+            if (DB_HOST !== '127.0.0.1' && DB_HOST !== 'localhost') {
                 $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
                 $options[PDO::MYSQL_ATTR_SSL_CA] = '';
             }

@@ -18,12 +18,13 @@ fi
 
 echo "[attendx] Starting MariaDB..."
 mysqld_safe --user=mysql --skip-grant-tables \
+    --bind-address=127.0.0.1 \
     --innodb-buffer-pool-size=32M \
     --key-buffer-size=8M \
     --max-connections=20 &
 
 for i in $(seq 1 30); do
-    if mysqladmin ping --silent 2>/dev/null; then
+    if mysqladmin --protocol=tcp -h 127.0.0.1 ping --silent 2>/dev/null; then
         echo "[attendx] MariaDB is ready."
         break
     fi
@@ -31,18 +32,18 @@ for i in $(seq 1 30); do
 done
 
 # ── Initialize app database ──
-mysql -u root -e "CREATE DATABASE IF NOT EXISTS taascor_attendance CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null
+mysql --protocol=tcp -h 127.0.0.1 -u root -e "CREATE DATABASE IF NOT EXISTS taascor_attendance CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null
 
-TABLE_COUNT=$(mysql -u root -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'taascor_attendance';" 2>/dev/null || echo "0")
+TABLE_COUNT=$(mysql --protocol=tcp -h 127.0.0.1 -u root -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'taascor_attendance';" 2>/dev/null || echo "0")
 
 if [ "$TABLE_COUNT" -lt "5" ]; then
     echo "[attendx] Creating tables..."
-    mysql -u root taascor_attendance < /var/www/html/ATTENDANCE/init-database.sql 2>/dev/null
+    mysql --protocol=tcp -h 127.0.0.1 -u root taascor_attendance < /var/www/html/ATTENDANCE/init-database.sql 2>/dev/null
 
     ADMIN_HASH=$(php -r "echo password_hash('admin123', PASSWORD_BCRYPT);")
     COOR_HASH=$(php -r "echo password_hash('coor1', PASSWORD_BCRYPT);")
 
-    mysql -u root taascor_attendance -e "
+    mysql --protocol=tcp -h 127.0.0.1 -u root taascor_attendance -e "
         UPDATE users SET password='${ADMIN_HASH}' WHERE username='admin';
         INSERT IGNORE INTO users (username, password, full_name, role, status)
         VALUES ('coor1', '${COOR_HASH}', 'Coordinator', 'coordinator', 'active');
