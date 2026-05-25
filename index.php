@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $log->execute([$user['id'], 'Login', 'User logged in']);
 
             // Redirect by role
-            if ($user['role'] === 'admin') {
+            if ($user['role'] === 'admin') {    
                 header('Location: /ATTENDANCE/admin/dashboard.php');
             } else {
                 header('Location: /ATTENDANCE/coordinator/dashboard.php');

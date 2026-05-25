@@ -31,11 +31,25 @@ function getDB() {
             }
             $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch (PDOException $e) {
-            die('<div style="padding:40px;font-family:sans-serif;text-align:center;">
-                <h2>Database Connection Error</h2>
-                <p>Could not connect to MySQL. Please make sure XAMPP/MySQL is running.</p>
-                <p style="color:#888;font-size:13px;">' . $e->getMessage() . '</p>
-            </div>');
+            http_response_code(503);
+            die('<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+            <title>Database Error — AttendX</title>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+            <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Inter,sans-serif;background:#0d0e12;color:#fff;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+            .card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:32px;max-width:480px;width:100%;text-align:center}
+            h2{color:#f87171;margin-bottom:12px;font-size:20px}p{color:#9ca3af;font-size:14px;line-height:1.6;margin-bottom:12px}
+            .err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:12px;color:#fca5a5;font-size:12px;font-family:monospace;word-break:break-all;margin:16px 0}
+            .hint{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.15);border-radius:10px;padding:14px;color:#93c5fd;font-size:13px;text-align:left;margin-top:16px}
+            .hint strong{color:#60a5fa}</style></head><body><div class="card">
+            <h2>⚠️ Database Connection Error</h2>
+            <p>AttendX cannot connect to the MySQL database.</p>
+            <div class="err">' . htmlspecialchars($e->getMessage()) . '</div>
+            <div class="hint"><strong>How to fix:</strong><br>
+            1. Go to your <strong>Render Dashboard → Environment</strong><br>
+            2. Set these variables: <strong>DB_HOST</strong>, <strong>DB_NAME</strong>, <strong>DB_USER</strong>, <strong>DB_PASS</strong><br>
+            3. Use a free MySQL provider like <strong>TiDB Cloud</strong> or <strong>Aiven</strong><br>
+            4. After setting env vars, run <strong>/ATTENDANCE/cloud-setup.php?key=YOUR_SETUP_KEY</strong></div>
+            </div></body></html>');
         }
     }
     return $pdo;
