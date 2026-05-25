@@ -39,20 +39,32 @@ CREATE TABLE IF NOT EXISTS employees (
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Attendance Table
+-- Attendance Table (full schema with all tracking columns)
 CREATE TABLE IF NOT EXISTS attendance (
     id INT PRIMARY KEY AUTO_INCREMENT,
     employee_id INT NOT NULL,
     date DATE NOT NULL,
-    status ENUM('present', 'absent', 'no_work', 'leave', 'sent_home', 'rest_day') NOT NULL,
+    status ENUM('present', 'absent', 'no_work', 'leave', 'sent_home', 'rest_day') NOT NULL DEFAULT 'present',
     recorded_by INT,
+    is_late BOOLEAN DEFAULT FALSE,
+    late_minutes INT DEFAULT 0,
+    is_undertime BOOLEAN DEFAULT FALSE,
+    undertime_minutes INT DEFAULT 0,
+    ot_hours DECIMAL(5,2) DEFAULT 0,
+    total_hours DECIMAL(5,2) DEFAULT 0,
+    time_in TIME,
+    time_out TIME,
+    ot_start TIME,
+    ot_end TIME,
+    remarks TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY unique_attendance (employee_id, date),
     FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
     FOREIGN KEY (recorded_by) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_date (date),
-    INDEX idx_employee (employee_id)
+    INDEX idx_employee (employee_id),
+    INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Activity Log Table
@@ -91,14 +103,13 @@ CREATE TABLE IF NOT EXISTS attendance_edit_requests (
     INDEX idx_requested_by (requested_by)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Insert sample data
--- Admin user (password: admin123)
-INSERT IGNORE INTO users (username, password, full_name, role, status) 
-VALUES ('admin', '$2y$10$YourHashedPasswordHere', 'Administrator', 'admin', 'active');
+-- Insert default admin user (password hash is updated by start.sh at runtime)
+INSERT IGNORE INTO users (username, password, full_name, role, status)
+VALUES ('admin', '$2y$10$placeholder', 'Administrator', 'admin', 'active');
 
 -- Sample departments
-INSERT IGNORE INTO departments (name) 
-VALUES 
+INSERT IGNORE INTO departments (name)
+VALUES
     ('Human Resources'),
     ('Finance'),
     ('Operations'),

@@ -1,29 +1,16 @@
 # render.yaml — Render.com Blueprint for AttendX For TAASCOR
-# Deploy via: https://render.com/deploy
+# Database is embedded in the Docker container — no external DB needed.
 
 services:
-  # ── Main Web Service ──────────────────────────────────────────
+  # ── Main Web Service (PHP + Apache + MariaDB all-in-one) ─────
   - type: web
     name: attendx-taascor
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile
     healthCheckPath: /ATTENDANCE/health.php
-    envVars:
-      - key: DB_HOST
-        sync: false
-      - key: DB_NAME
-        sync: false
-      - key: DB_USER
-        sync: false
-      - key: DB_PASS
-        sync: false
-      - key: DB_PORT
-        value: "3306"
-      - key: SETUP_KEY
-        generateValue: true
 
-  # ── Keep-Alive Cron (pings the web service every 14 min) ─────
+  # ── Keep-Alive Cron (pings every 14 min to prevent sleep) ───
   - type: cron
     name: attendx-keepalive
     runtime: image

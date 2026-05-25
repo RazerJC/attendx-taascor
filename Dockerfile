@@ -1,10 +1,15 @@
 # AttendX For TAASCOR — Render.com Deployment
-# PHP 8.2 + Apache + MySQL PDO
+# PHP 8.2 + Apache + Embedded MariaDB (no external DB needed)
 
 FROM php:8.2-apache
 
-# Install MySQL PDO extension
-RUN docker-php-ext-install pdo pdo_mysql mysqli
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install MariaDB server + PHP MySQL extensions
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    mariadb-server \
+    && docker-php-ext-install pdo pdo_mysql mysqli \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
@@ -15,11 +20,16 @@ RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 # Allow .htaccess overrides
 RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
 
-# Copy application to /var/www/html/ATTENDANCE/ so all existing paths work
+# Copy application to /var/www/html/ATTENDANCE/
 COPY . /var/www/html/ATTENDANCE/
 
 # Create a root index.php that redirects to /ATTENDANCE/
 RUN echo '<?php header("Location: /ATTENDANCE/index.php"); exit; ?>' > /var/www/html/index.php
+
+# Copy startup script and fix line endings (Windows CRLF → Unix LF)
+COPY start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh && \
+    sed -i 's/\r$//' /usr/local/bin/start.sh
 
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html && \
@@ -36,13 +46,5 @@ RUN echo "display_errors = Off" >> /usr/local/etc/php/conf.d/custom.ini && \
     echo "session.cookie_secure = 1" >> /usr/local/etc/php/conf.d/custom.ini && \
     echo "session.cookie_httponly = 1" >> /usr/local/etc/php/conf.d/custom.ini
 
-# Create startup script that sets Apache port from PORT env var at runtime
-RUN echo '#!/bin/bash\n\
-PORT="${PORT:-10000}"\n\
-sed -i "s/Listen 80/Listen ${PORT}/" /etc/apache2/ports.conf\n\
-sed -i "s/:80>/:${PORT}>/" /etc/apache2/sites-available/000-default.conf\n\
-exec apache2-foreground' > /usr/local/bin/start.sh && \
-    chmod +x /usr/local/bin/start.sh
-
-# Start Apache via startup script
+# Start MariaDB + Apache via startup script
 CMD ["/usr/local/bin/start.sh"]
