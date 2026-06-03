@@ -26,8 +26,12 @@ function getDB() {
             ];
             // Enable SSL for cloud databases (TiDB Cloud requires TLS)
             if (DB_HOST !== '127.0.0.1' && DB_HOST !== 'localhost') {
-                $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
-                $options[PDO::MYSQL_ATTR_SSL_CA] = '';
+                if (defined('PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT')) {
+                    $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+                }
+                if (defined('PDO::MYSQL_ATTR_SSL_CA')) {
+                    $options[PDO::MYSQL_ATTR_SSL_CA] = '';
+                }
             }
             $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch (PDOException $e) {

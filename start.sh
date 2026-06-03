@@ -10,11 +10,14 @@ sed -i "s/:80>/:${PORT}>/" /etc/apache2/sites-available/000-default.conf
 # ── Start embedded MariaDB ──
 mkdir -p /run/mysqld
 chown mysql:mysql /run/mysqld
+chown -R mysql:mysql /var/lib/mysql
 
 if [ ! -d "/var/lib/mysql/mysql" ]; then
     echo "[attendx] Initializing MariaDB data directory..."
     mysql_install_db --user=mysql --datadir=/var/lib/mysql
 fi
+
+chown -R mysql:mysql /var/lib/mysql
 
 echo "[attendx] Starting MariaDB..."
 mysqld_safe --user=mysql --skip-grant-tables \
