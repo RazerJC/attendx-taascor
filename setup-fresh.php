@@ -91,12 +91,12 @@ try {
     // Disable foreign key checks temporarily
     $pdo->exec("SET FOREIGN_KEY_CHECKS=0");
     
-    // Clear existing data
-    $pdo->exec("DELETE FROM activity_log");
-    $pdo->exec("DELETE FROM attendance");
-    $pdo->exec("DELETE FROM employees");
-    $pdo->exec("DELETE FROM users");
-    $pdo->exec("DELETE FROM departments");
+    // Clear existing data and reset auto-increment counters
+    $pdo->exec("TRUNCATE TABLE activity_log");
+    $pdo->exec("TRUNCATE TABLE attendance");
+    $pdo->exec("TRUNCATE TABLE employees");
+    $pdo->exec("TRUNCATE TABLE users");
+    $pdo->exec("TRUNCATE TABLE departments");
     
     // Re-enable foreign key checks
     $pdo->exec("SET FOREIGN_KEY_CHECKS=1");
@@ -136,7 +136,7 @@ try {
     // Insert sample employees
     $pdo->exec("DELETE FROM employees");
     $pdo->exec("INSERT INTO employees (first_name, last_name, department_id, position, date_hired, status) 
-               VALUES ('John', 'Doe', 1, 'Manager', '2023-01-15', 'active'),
+               VALUES ('John Carl', 'Bañares', 1, 'Manager', '2023-01-15', 'active'),
                       ('Jane', 'Smith', 2, 'Analyst', '2023-02-20', 'active'),
                       ('Bob', 'Johnson', 3, 'Officer', '2023-03-10', 'active')");
     

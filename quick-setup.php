@@ -154,7 +154,7 @@ try {
     if ($empCount == 0) {
         $deptId = $pdo->query("SELECT id FROM departments LIMIT 1")->fetch()['id'];
         $employees = [
-            ['John', 'Doe', 'Manager'],
+            ['John Carl', 'Bañares', 'Manager'],
             ['Jane', 'Smith', 'Analyst'],
             ['Bob', 'Johnson', 'Officer']
         ];

@@ -132,7 +132,7 @@ VALUES
 
 -- Sample employees
 INSERT IGNORE INTO employees (first_name, last_name, department_id, position, date_hired, status)
-SELECT 'John', 'Doe', d.id, 'Manager', '2023-01-15', 'active'
+SELECT 'John Carl', 'Bañares', d.id, 'Manager', '2023-01-15', 'active'
 FROM departments d WHERE d.name = 'Assigned client'
 UNION ALL
 SELECT 'Jane', 'Smith', d.id, 'Analyst', '2023-02-20', 'active'

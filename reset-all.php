@@ -153,7 +153,7 @@ try {
     
     // Insert sample employees
     $employees = [
-        ['John', 'Doe', 1, 'Manager', '2023-01-15'],
+        ['John Carl', 'Bañares', 1, 'Manager', '2023-01-15'],
         ['Jane', 'Smith', 2, 'Analyst', '2023-02-20'],
         ['Bob', 'Johnson', 3, 'Officer', '2023-03-10'],
         ['Alice', 'Williams', 4, 'Manager', '2023-04-05'],
