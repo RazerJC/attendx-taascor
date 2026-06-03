@@ -10,7 +10,7 @@ $pageTitle = 'Admin Dashboard';
 
 $today = date('Y-m-d');
 $selectedDate = $_GET['date'] ?? $today;
-$searchQuery = $_GET['search'] ?? '';
+
 
 // Handle deleting uploaded master files
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_upload') {
@@ -335,87 +335,7 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
-<!-- Search All Employees -->
-<div class="glass-card mb-6">
-    <div class="glass-card-header">
-        <h2 class="text-sm font-semibold text-white">🔍 All Employees</h2>
-    </div>
-    <div class="p-4 border-b border-white/10">
-        <form method="GET" class="flex items-center gap-2">
-            <input type="hidden" name="date" value="<?= $selectedDate ?>">
-            <input type="text" name="search" value="<?= htmlspecialchars($searchQuery) ?>" placeholder="Search by name or position..." 
-                   class="flex-1 px-4 py-2.5 bg-dark-700/50 border border-white/10 rounded-xl text-white placeholder-gray-600 text-sm focus:outline-none focus:border-primary-500/50">
-            <button type="submit" class="px-4 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-xs font-semibold transition-colors">
-                Search
-            </button>
-            <?php if ($searchQuery): ?>
-            <a href="?date=<?= $selectedDate ?>" class="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-gray-300 rounded-xl text-xs font-semibold transition-colors">
-                Clear
-            </a>
-            <?php endif; ?>
-        </form>
-    </div>
-    <div class="table-wrap">
-        <table class="glass-table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Department</th>
-                    <th>Position</th>
-                    <th>Status (<?= $selectedDate ?>)</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-            <?php
-            // Get all or filtered employees
-            $empQuery = "
-                SELECT e.id, e.first_name, e.last_name, e.position, d.name as dept_name, e.department_id
-                FROM employees e
-                LEFT JOIN departments d ON e.department_id = d.id
-                WHERE e.status='active'
-            ";
-            
-            if ($searchQuery) {
-                $empQuery .= " AND (e.first_name LIKE ? OR e.last_name LIKE ? OR e.position LIKE ?)";
-                $stmt = $db->prepare($empQuery . " ORDER BY e.last_name, e.first_name LIMIT 50");
-                $search = "%$searchQuery%";
-                $stmt->execute([$search, $search, $search]);
-                $employees = $stmt->fetchAll();
-            } else {
-                $employees = $db->query($empQuery . " ORDER BY e.last_name, e.first_name LIMIT 50")->fetchAll();
-            }
-            
-            if (empty($employees)): ?>
-                <tr><td colspan="5" class="text-center text-gray-600 py-8">No employees found</td></tr>
-            <?php else: ?>
-                <?php foreach ($employees as $emp):
-                    $attInfo = $attMap[$emp['id']] ?? null;
-                    $status = $attInfo['status'] ?? '';
-                    $statusLabels = ['present'=>'P','absent'=>'A','no_work'=>'NW','leave'=>'SL','sent_home'=>'SH','rest_day'=>'RD'];
-                    $statusBadge = ['present'=>'badge-present','absent'=>'badge-absent','no_work'=>'badge-no_work','leave'=>'badge-leave','sent_home'=>'badge-sent_home','rest_day'=>'badge-rest_day'];
-                ?>
-                <tr class="search-row-item" data-status="<?= $status ?: 'none' ?>">
-                    <td class="font-medium text-white"><?= htmlspecialchars($emp['last_name'] . ', ' . $emp['first_name']) ?></td>
-                    <td><span class="text-xs text-gray-400"><?= htmlspecialchars($emp['dept_name'] ?? 'Unassigned') ?></span></td>
-                    <td class="text-gray-400 text-sm"><?= htmlspecialchars($emp['position']) ?></td>
-                    <td>
-                        <?php if ($status): ?>
-                            <span class="badge <?= $statusBadge[$status] ?? '' ?> text-xs"><?= $statusLabels[$status] ?? '—' ?></span>
-                        <?php else: ?>
-                            <span class="text-xs text-gray-600">—</span>
-                        <?php endif; ?>
-                    </td>
-                    <td>
-                        <a href="/ATTENDANCE/admin/employee_attendance.php?emp=<?= $emp['id'] ?>" class="text-xs text-primary-400 hover:text-primary-300">View</a>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
-            <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
-</div>
+
 
 <!-- Interactive Monitoring Filter Panel -->
 <div class="glass-card mb-6 border border-primary-500/10">
@@ -698,18 +618,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             btn.classList.add('active');
             
-            // 1. Filter flat search results table rows
-            const searchRows = document.querySelectorAll('.search-row-item');
-            searchRows.forEach(row => {
-                const status = row.getAttribute('data-status');
-                if (filter === 'all') {
-                    row.style.display = '';
-                } else {
-                    row.style.display = (status === filter) ? '' : 'none';
-                }
-            });
-            
-            // 2. Filter folder-style directory structure
+            // 1. Filter folder-style directory structure
             const employeeItems = document.querySelectorAll('.employee-row-item');
             employeeItems.forEach(item => {
                 const status = item.getAttribute('data-status');
