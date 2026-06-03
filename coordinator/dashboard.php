@@ -9,6 +9,43 @@ $db = getDB();
 $user = currentUser();
 $pageTitle = 'Coordinator Dashboard';
 
+$uploadMessage = '';
+$uploadError = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['master_file'])) {
+    $file = $_FILES['master_file'];
+    
+    // Validate file
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    $allowed = ['xlsx', 'xls'];
+    
+    if (!in_array($ext, $allowed)) {
+        $uploadError = 'Invalid file type. Only Excel files (.xlsx, .xls) are allowed.';
+    } elseif ($file['size'] > 10 * 1024 * 1024) { // 10MB limit
+        $uploadError = 'File size is too large. Maximum size is 10MB.';
+    } elseif ($file['error'] !== UPLOAD_ERR_OK) {
+        $uploadError = 'Error uploading file. Please try again.';
+    } else {
+        // Create uploads directory if not exists
+        $uploadDir = __DIR__ . '/../uploads/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        
+        // Format filename: Master_File_YYYY-MM-DD_HHMMSS.xlsx
+        $filename = 'Master_File_' . date('Y-m-d_His') . '.' . $ext;
+        $destPath = $uploadDir . $filename;
+        
+        if (move_uploaded_file($file['tmp_name'], $destPath)) {
+            // Log activity
+            logActivity('Master File Uploaded', "Uploaded file: $filename");
+            $uploadMessage = "✅ File '$filename' uploaded successfully!";
+        } else {
+            $uploadError = 'Failed to save uploaded file.';
+        }
+    }
+}
+
 $selectedDate = $_GET['date'] ?? date('Y-m-d');
 
 // Get departments and employees visible to this coordinator
@@ -217,12 +254,48 @@ $isFutureDate = strtotime($selectedDate) > strtotime($today);
     </div>
 </div>
 
-<!-- Quick Links -->
-<div class="flex flex-wrap gap-3 mb-5">
-    <a href="/ATTENDANCE/coordinator/attendance.php?date=<?= $selectedDate ?>" class="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white rounded-2xl text-base font-bold uppercase tracking-wider transition-all shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 hover:scale-[1.02] active:scale-[0.98]">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-        Record Attendance
-    </a>
+<!-- Quick Actions & File Upload -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <!-- Quick Actions Card -->
+    <div class="lg:col-span-1 glass-card p-6 flex flex-col justify-between">
+        <div>
+            <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">⚡ Quick Actions</h3>
+            <p class="text-xs text-gray-500 mb-4 leading-relaxed">Directly record or update attendance logs in the system database.</p>
+        </div>
+        <a href="/ATTENDANCE/coordinator/attendance.php?date=<?= $selectedDate ?>" class="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white rounded-xl text-sm font-semibold uppercase tracking-wider transition-all shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 hover:scale-[1.02] active:scale-[0.98] w-full text-center">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+            Record Attendance
+        </a>
+    </div>
+
+    <!-- Upload Master File Card -->
+    <div class="lg:col-span-2 glass-card p-6 flex flex-col justify-between">
+        <div>
+            <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">📤 Upload Attendance Master File</h3>
+            <p class="text-xs text-gray-500 mb-4 leading-relaxed">Upload the Excel Master File (.xlsx) to submit it directly to the Admin.</p>
+        </div>
+        
+        <?php if ($uploadMessage): ?>
+            <div class="mb-4 px-4 py-2.5 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-xs font-semibold text-center">
+                <?= $uploadMessage ?>
+            </div>
+        <?php endif; ?>
+        
+        <?php if ($uploadError): ?>
+            <div class="mb-4 px-4 py-2.5 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-semibold text-center">
+                <?= $uploadError ?>
+            </div>
+        <?php endif; ?>
+
+        <form method="POST" enctype="multipart/form-data" class="flex flex-col sm:flex-row gap-3 items-stretch">
+            <div class="flex-1">
+                <input type="file" name="master_file" required accept=".xlsx, .xls" class="w-full text-xs text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-white/5 file:text-white hover:file:bg-white/10 file:cursor-pointer border border-white/10 rounded-xl p-1 bg-dark-700/30">
+            </div>
+            <button type="submit" class="px-6 py-2.5 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-lg transition-all flex items-center justify-center gap-2 whitespace-nowrap active:scale-[0.98]">
+                <span>📤 Upload</span>
+            </button>
+        </form>
+    </div>
 </div>
 
 <!-- Department Folders -->
