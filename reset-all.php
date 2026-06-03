@@ -118,11 +118,32 @@ try {
     echo "\nInserting sample data...\n\n";
     
     // Insert departments
-    $departments = ['Human Resources', 'Finance', 'Operations', 'Sales', 'Marketing'];
+    $departments = [
+        'Assigned client',
+        'PH LAG1',
+        'PH LAG2',
+        'PH LAG3',
+        'PH LAG4',
+        'PH LAG5',
+        'PH LAG6',
+        'PH LAG7',
+        'PH LAG8',
+        'PH LAG9',
+        'PH LAG10',
+        'PH LAG11',
+        'PHL- BATINO',
+        'PHE-A',
+        'PHIX-C',
+        'MMIX',
+        'BC MAMATID',
+        'BC SILANGAN',
+        'BICANG'
+    ];
+    $stmt = $pdo->prepare("INSERT INTO departments (name) VALUES (?)");
     foreach ($departments as $dept) {
-        $pdo->exec("INSERT INTO departments (name) VALUES ('$dept')");
+        $stmt->execute([$dept]);
     }
-    echo "✓ Added 5 departments\n";
+    echo "✓ Added departments\n";
     
     // Create admin user
     $adminPassword = password_hash('admin123', PASSWORD_BCRYPT);

@@ -116,7 +116,27 @@ try {
     }
     
     // Insert sample departments
-    $depts = ['Human Resources', 'Finance', 'Operations', 'Sales', 'Marketing'];
+    $depts = [
+        'Assigned client',
+        'PH LAG1',
+        'PH LAG2',
+        'PH LAG3',
+        'PH LAG4',
+        'PH LAG5',
+        'PH LAG6',
+        'PH LAG7',
+        'PH LAG8',
+        'PH LAG9',
+        'PH LAG10',
+        'PH LAG11',
+        'PHL- BATINO',
+        'PHE-A',
+        'PHIX-C',
+        'MMIX',
+        'BC MAMATID',
+        'BC SILANGAN',
+        'BICANG'
+    ];
     $inserted = 0;
     foreach ($depts as $dept) {
         try {

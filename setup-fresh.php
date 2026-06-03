@@ -102,7 +102,31 @@ try {
     $pdo->exec("SET FOREIGN_KEY_CHECKS=1");
     
     // Insert default departments
-    $pdo->exec("INSERT INTO departments (name) VALUES ('Human Resources'), ('Finance'), ('Operations'), ('Sales'), ('Marketing')");
+    $departments = [
+        'Assigned client',
+        'PH LAG1',
+        'PH LAG2',
+        'PH LAG3',
+        'PH LAG4',
+        'PH LAG5',
+        'PH LAG6',
+        'PH LAG7',
+        'PH LAG8',
+        'PH LAG9',
+        'PH LAG10',
+        'PH LAG11',
+        'PHL- BATINO',
+        'PHE-A',
+        'PHIX-C',
+        'MMIX',
+        'BC MAMATID',
+        'BC SILANGAN',
+        'BICANG'
+    ];
+    $stmt = $pdo->prepare("INSERT INTO departments (name) VALUES (?)");
+    foreach ($departments as $name) {
+        $stmt->execute([$name]);
+    }
     
     // Create admin user with proper password hash
     $adminPassword = password_hash('admin123', PASSWORD_BCRYPT);

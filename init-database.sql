@@ -110,20 +110,34 @@ VALUES ('admin', '$2y$10$placeholder', 'Administrator', 'admin', 'active');
 -- Sample departments
 INSERT IGNORE INTO departments (name)
 VALUES
-    ('Human Resources'),
-    ('Finance'),
-    ('Operations'),
-    ('Sales'),
-    ('Marketing');
+    ('Assigned client'),
+    ('PH LAG1'),
+    ('PH LAG2'),
+    ('PH LAG3'),
+    ('PH LAG4'),
+    ('PH LAG5'),
+    ('PH LAG6'),
+    ('PH LAG7'),
+    ('PH LAG8'),
+    ('PH LAG9'),
+    ('PH LAG10'),
+    ('PH LAG11'),
+    ('PHL- BATINO'),
+    ('PHE-A'),
+    ('PHIX-C'),
+    ('MMIX'),
+    ('BC MAMATID'),
+    ('BC SILANGAN'),
+    ('BICANG');
 
 -- Sample employees
 INSERT IGNORE INTO employees (first_name, last_name, department_id, position, date_hired, status)
 SELECT 'John', 'Doe', d.id, 'Manager', '2023-01-15', 'active'
-FROM departments d WHERE d.name = 'Human Resources'
+FROM departments d WHERE d.name = 'Assigned client'
 UNION ALL
 SELECT 'Jane', 'Smith', d.id, 'Analyst', '2023-02-20', 'active'
-FROM departments d WHERE d.name = 'Finance'
+FROM departments d WHERE d.name = 'PH LAG1'
 UNION ALL
 SELECT 'Bob', 'Johnson', d.id, 'Officer', '2023-03-10', 'active'
-FROM departments d WHERE d.name = 'Operations'
+FROM departments d WHERE d.name = 'PH LAG2'
 ON DUPLICATE KEY UPDATE status = 'active';
