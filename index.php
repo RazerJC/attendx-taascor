@@ -32,29 +32,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($username && $password) {
         $db = getDB();
-        $stmt = $db->prepare("SELECT * FROM users WHERE username = ? AND status = 'active'");
+        $stmt = $db->prepare("SELECT * FROM users WHERE username = ?");
         $stmt->execute([$username]);
         $user = $stmt->fetch();
 
-        if ($user && password_verify($password, $user['password'])) {
-            // Set session
-            $_SESSION['user_id']       = $user['id'];
-            $_SESSION['username']      = $user['username'];
-            $_SESSION['full_name']     = $user['full_name'];
-            $_SESSION['role']          = $user['role'];
-            $_SESSION['department_id'] = $user['department_id'];
+        if ($user) {
+            if ($user['status'] === 'inactive') {
+                $error = 'Your coordinator account is pending administrator approval.';
+            } elseif (password_verify($password, $user['password'])) {
+                // Set session
+                $_SESSION['user_id']       = $user['id'];
+                $_SESSION['username']      = $user['username'];
+                $_SESSION['full_name']     = $user['full_name'];
+                $_SESSION['role']          = $user['role'];
+                $_SESSION['department_id'] = $user['department_id'];
 
-            // Log activity
-            $log = $db->prepare("INSERT INTO activity_log (user_id, action, details) VALUES (?, ?, ?)");
-            $log->execute([$user['id'], 'Login', 'User logged in']);
+                // Log activity
+                $log = $db->prepare("INSERT INTO activity_log (user_id, action, details) VALUES (?, ?, ?)");
+                $log->execute([$user['id'], 'Login', 'User logged in']);
 
-            // Redirect by role
-            if ($user['role'] === 'admin') {    
-                header('Location: /ATTENDANCE/admin/dashboard.php');
+                // Redirect by role
+                if ($user['role'] === 'admin') {    
+                    header('Location: /ATTENDANCE/admin/dashboard.php');
+                } else {
+                    header('Location: /ATTENDANCE/coordinator/dashboard.php');
+                }
+                exit;
             } else {
-                header('Location: /ATTENDANCE/coordinator/dashboard.php');
+                $error = 'Invalid username or password.';
             }
-            exit;
         } else {
             $error = 'Invalid username or password.';
         }
@@ -129,6 +135,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     Sign In
                 </button>
             </form>
+
+            <div class="flex items-center justify-between mt-6 text-xs border-t border-white/5 pt-4">
+                <a href="/ATTENDANCE/register.php" class="text-primary-400 hover:underline">Register Coordinator</a>
+                <a href="/ATTENDANCE/forgot_password.php" class="text-gray-500 hover:text-gray-300">Forgot Password?</a>
+            </div>
 
             <p class="text-center text-xs text-gray-600 mt-6">TAASCOR Attendance Monitoring System &copy; <?= date('Y') ?></p>
         </div>

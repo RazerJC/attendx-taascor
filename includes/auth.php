@@ -34,6 +34,12 @@ function getDB() {
                 }
             }
             $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+            // Automatic column migration for reset requests
+            try {
+                $pdo->query("SELECT reset_requested FROM users LIMIT 1");
+            } catch (PDOException $ex) {
+                $pdo->exec("ALTER TABLE users ADD COLUMN reset_requested TINYINT DEFAULT 0");
+            }
         } catch (PDOException $e) {
             http_response_code(503);
             die('<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -129,8 +135,11 @@ function getFlash() {
  */
 function getVisibleDepartments($db) {
     $deptId = $_SESSION['department_id'] ?? null;
-    if ($_SESSION['role'] === 'admin' || $deptId === null) {
+    if ($_SESSION['role'] === 'admin') {
         return $db->query("SELECT * FROM departments ORDER BY name")->fetchAll();
+    }
+    if ($_SESSION['role'] === 'coordinator' && $deptId === null) {
+        return [];
     }
     $stmt = $db->prepare("SELECT * FROM departments WHERE id = ? ORDER BY name");
     $stmt->execute([$deptId]);
@@ -144,12 +153,15 @@ function getVisibleDepartments($db) {
  */
 function getVisibleEmployees($db) {
     $deptId = $_SESSION['department_id'] ?? null;
-    if ($_SESSION['role'] === 'admin' || $deptId === null) {
+    if ($_SESSION['role'] === 'admin') {
         return $db->query("
             SELECT e.id, e.first_name, e.last_name, e.position, e.department_id
             FROM employees e WHERE e.status='active'
             ORDER BY e.last_name, e.first_name
         ")->fetchAll();
+    }
+    if ($_SESSION['role'] === 'coordinator' && $deptId === null) {
+        return [];
     }
     $stmt = $db->prepare("
         SELECT e.id, e.first_name, e.last_name, e.position, e.department_id
