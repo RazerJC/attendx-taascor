@@ -150,6 +150,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <svg class="w-5 h-5 text-gray-500 transition-transform duration-200" data-arrow="<?= $dept['id'] ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     <span class="text-lg font-bold text-white" data-dept-name="<?= $dept['id'] ?>">📁 <?= htmlspecialchars($dept['name']) ?></span>
                     <span class="text-sm text-gray-500 bg-white/5 px-3 py-1 rounded-full font-semibold"><?= $totalCount ?> staff</span>
+                    <div class="flex flex-wrap gap-1 ml-2 text-xs" data-dept-summary="<?= $dept['id'] ?>"></div>
                     <button type="button" data-edit-dept="<?= $dept['id'] ?>" data-dept-current="<?= htmlspecialchars($dept['name'], ENT_QUOTES) ?>" class="text-gray-600 hover:text-primary-400 transition-colors ml-auto" title="Edit department">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                     </button>
@@ -175,8 +176,9 @@ require_once __DIR__ . '/../includes/header.php';
                             <svg class="w-4 h-4 text-gray-500 transition-transform duration-200" data-pos-arrow="<?= $posKey ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                             <span class="text-sm font-semibold text-gray-200">📂 <?= htmlspecialchars($position) ?></span>
                             <span class="text-sm text-gray-600 bg-white/5 px-2 py-0.5 rounded font-semibold"><?= $posCount ?></span>
+                            <div class="flex flex-wrap gap-1 ml-2 text-[10px]" data-pos-summary="<?= $posKey ?>"></div>
                         </div>
-                        <div class="flex gap-1" data-markall-pos="<?= $posKey ?>" onclick="event.stopPropagation();">
+                        <div class="flex gap-1" data-markall-pos="<?= $posKey ?>">
                             <button type="button" data-mark-pos="<?= $posKey ?>" data-mark-status="present" class="att-btn px-2 py-0.5 text-[9px] font-semibold">P</button>
                             <button type="button" data-mark-pos="<?= $posKey ?>" data-mark-status="absent" class="att-btn px-2 py-0.5 text-[9px] font-semibold">A</button>
                             <button type="button" data-mark-pos="<?= $posKey ?>" data-mark-status="no_work" class="att-btn px-2 py-0.5 text-[9px] font-semibold">NW</button>
@@ -189,7 +191,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <?php foreach ($emps as $emp):
                             $status = $existingMap[$emp['id']] ?? '';
                         ?>
-                        <div class="flex items-center gap-3 px-8 py-3.5 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] transition-all duration-200 group" data-emp-row data-emp-dept="<?= $dept['id'] ?>" data-emp-id="<?= $emp['id'] ?>">
+                        <div class="flex items-center gap-3 px-8 py-3.5 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.03] transition-all duration-200 group" data-emp-row data-emp-dept="<?= $dept['id'] ?>" data-emp-pos="<?= $posKey ?>" data-emp-id="<?= $emp['id'] ?>">
                             <!-- Employee Info -->
                             <div class="flex-1 min-w-0 flex items-center gap-2.5">
                                 <div class="flex-1 min-w-0">
@@ -347,6 +349,70 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function updateSummaries() {
+        var statusShort = {
+            'present': 'P',
+            'absent': 'A',
+            'no_work': 'NW',
+            'leave': 'SL',
+            'sent_home': 'SH',
+            'rest_day': 'RD'
+        };
+        var statusBadgeClass = {
+            'present': 'badge-present',
+            'absent': 'badge-absent',
+            'no_work': 'badge-no_work',
+            'leave': 'badge-leave',
+            'sent_home': 'badge-sent_home',
+            'rest_day': 'badge-rest_day'
+        };
+
+        var deptCounts = {};
+        var posCounts = {};
+
+        var rows = document.querySelectorAll('[data-emp-row]');
+        rows.forEach(function(row) {
+            var deptId = row.getAttribute('data-emp-dept');
+            var posKey = row.getAttribute('data-emp-pos');
+            var statusInput = row.querySelector('[data-status]');
+            var status = statusInput ? statusInput.value : '';
+
+            if (status) {
+                if (!deptCounts[deptId]) deptCounts[deptId] = {};
+                deptCounts[deptId][status] = (deptCounts[deptId][status] || 0) + 1;
+
+                if (!posCounts[posKey]) posCounts[posKey] = {};
+                posCounts[posKey][status] = (posCounts[posKey][status] || 0) + 1;
+            }
+        });
+
+        document.querySelectorAll('[data-dept-summary]').forEach(function(container) {
+            var deptId = container.getAttribute('data-dept-summary');
+            var counts = deptCounts[deptId] || {};
+            var html = '';
+            STATUSES.forEach(function(s) {
+                var count = counts[s] || 0;
+                if (count > 0) {
+                    html += '<span class="px-2 py-0.5 rounded text-[10px] font-bold ' + statusBadgeClass[s] + '">' + statusShort[s] + '(' + count + ')</span>';
+                }
+            });
+            container.innerHTML = html;
+        });
+
+        document.querySelectorAll('[data-pos-summary]').forEach(function(container) {
+            var posKey = container.getAttribute('data-pos-summary');
+            var counts = posCounts[posKey] || {};
+            var html = '';
+            STATUSES.forEach(function(s) {
+                var count = counts[s] || 0;
+                if (count > 0) {
+                    html += '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold ' + statusBadgeClass[s] + '">' + statusShort[s] + '(' + count + ')</span>';
+                }
+            });
+            container.innerHTML = html;
+        });
+    }
+
     // --- Status Buttons (P, A, NW, SL, SH) ---
     document.addEventListener('click', function(e) {
         var btn = e.target.closest('[data-set-status]');
@@ -362,11 +428,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (input.value === status) {
                 input.value = '';
                 updateButtonClasses(empId, '');
+                updateSummaries();
                 return;
             }
             
             input.value = status;
             updateButtonClasses(empId, status);
+            updateSummaries();
             return;
         }
 
@@ -385,6 +453,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 inp.value = markStatus;
                 updateButtonClasses(eid, markStatus);
             });
+            updateSummaries();
             // Expand department folder
             var body = document.querySelector('[data-dept-body="' + deptId + '"]');
             if (body) body.style.display = '';
@@ -425,6 +494,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 inp.value = markStatus;
                 updateButtonClasses(eid, markStatus);
             });
+            updateSummaries();
             
             // Expand position folder
             if (posBody) posBody.style.display = '';
@@ -451,7 +521,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // --- Toggle Position Folder ---
         var posToggle = e.target.closest('[data-toggle-position]');
-        if (posToggle) {
+        if (posToggle && !e.target.closest('[data-mark-pos]')) {
             var posKey = posToggle.getAttribute('data-toggle-position');
             var posBody = document.querySelector('[data-position-body="' + posKey + '"]');
             var posArrow = document.querySelector('[data-pos-arrow="' + posKey + '"]');
@@ -579,6 +649,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
     });
+
+    // Run initial summary count
+    updateSummaries();
 
     // Departments start collapsed - no auto-expand
     // User must click to expand each department

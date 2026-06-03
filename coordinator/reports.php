@@ -58,6 +58,21 @@ require_once __DIR__ . '/../includes/header.php';
     <?php foreach ($departments as $dept):
         $deptEmps = $empsByDept[$dept['id']] ?? [];
         if (empty($deptEmps)) continue;
+        
+        // Sort employees by position, then alphabetically by last name, then first name
+        usort($deptEmps, function($a, $b) {
+            $posA = $a['position'] ?: 'Unassigned';
+            $posB = $b['position'] ?: 'Unassigned';
+            $posComp = strcmp($posA, $posB);
+            if ($posComp !== 0) {
+                return $posComp;
+            }
+            $lastNameComp = strcmp($a['last_name'], $b['last_name']);
+            if ($lastNameComp !== 0) {
+                return $lastNameComp;
+            }
+            return strcmp($a['first_name'], $b['first_name']);
+        });
     ?>
     <div class="glass-card">
         <div class="glass-card-header">
