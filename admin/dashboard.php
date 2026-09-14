@@ -14,6 +14,11 @@ $selectedDate = $_GET['date'] ?? $today;
 
 // Handle deleting uploaded master files
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_upload') {
+    if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
+        setFlash('error', 'Invalid or expired session token.');
+        header('Location: /ATTENDANCE/admin/dashboard.php?date=' . $selectedDate);
+        exit;
+    }
     $fileToDelete = $_POST['filename'] ?? '';
     $safeName = basename($fileToDelete);
     if (strpos($safeName, 'Master_File_') === 0 && (str_ends_with($safeName, '.xlsx') || str_ends_with($safeName, '.xls'))) {
@@ -55,6 +60,23 @@ $deptStats = $db->query("
 
 // Get departments with employees and today's attendance
 $departments = $db->query("SELECT * FROM departments ORDER BY name")->fetchAll();
+
+// Fetch coordinators mapped by department_id
+$coordStmt = $db->query("SELECT id, full_name, department_id FROM users WHERE role='coordinator' AND status='active'");
+$coordMap = [];
+foreach ($coordStmt->fetchAll() as $c) {
+    if ($c['department_id']) {
+        $coordMap[$c['department_id']] = $c;
+    }
+}
+
+// Fetch all active coordinators for the settings modal select dropdown
+$allCoordinators = $db->query("
+    SELECT id, full_name, department_id 
+    FROM users 
+    WHERE role = 'coordinator' AND status = 'active' 
+    ORDER BY full_name ASC
+")->fetchAll();
 
 // Get all active employees
 $allEmps = $db->query("
@@ -287,7 +309,10 @@ require_once __DIR__ . '/../includes/header.php';
     <!-- Coordinator Uploaded Files Manager -->
     <div class="lg:col-span-2 glass-card p-6 flex flex-col justify-between">
         <div>
-            <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">📂 Coordinator Master Files</h3>
+            <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <img src="/ATTENDANCE/assets/images/staff_icon.png" class="w-8 h-8 inline-block object-contain flex-shrink-0" alt="Staff">
+                <span>Coordinator Master Files</span>
+            </h3>
             <p class="text-xs text-gray-500 mb-4 leading-relaxed">Download or manage Excel Master Files uploaded by Coordinators.</p>
         </div>
         <div class="overflow-x-auto max-h-[190px] border border-white/5 rounded-xl bg-dark-900/40">
@@ -321,6 +346,7 @@ require_once __DIR__ . '/../includes/header.php';
                                 <td class="px-4 py-2 text-right whitespace-nowrap">
                                     <a href="/ATTENDANCE/uploads/<?= urlencode($name) ?>" download class="text-primary-400 hover:text-primary-300 font-semibold">Download</a>
                                     <form method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this master file?');">
+                                        <?= csrfField() ?>
                                         <input type="hidden" name="action" value="delete_upload">
                                         <input type="hidden" name="filename" value="<?= htmlspecialchars($name) ?>">
                                         <button type="submit" class="text-red-400 hover:text-red-300 font-semibold ml-3">Delete</button>
@@ -393,12 +419,30 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="glass-card dept-folder" id="dept_<?= $dept['id'] ?>" data-dept-id="<?= $dept['id'] ?>">
         <!-- Folder Header -->
         <div class="glass-card-header cursor-pointer select-none hover:bg-white/[0.02] transition-colors" onclick="toggleFolder(<?= $dept['id'] ?>)">
-            <div class="flex items-center gap-2">
-                <svg class="w-4 h-4 text-gray-500 transition-transform duration-200" id="arrow_<?= $dept['id'] ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                <span class="text-sm font-semibold text-white" id="deptName_<?= $dept['id'] ?>">📁 <?= htmlspecialchars($dept['name']) ?></span>
-                <span class="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded-full font-semibold"><?= $deptCount ?></span>
-                <button type="button" onclick="event.stopPropagation(); editDept(<?= $dept['id'] ?>, '<?= htmlspecialchars($dept['name'], ENT_QUOTES) ?>')" class="text-gray-600 hover:text-primary-400 transition-colors ml-1" title="Edit department name">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+            <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                <svg class="w-4 h-4 text-gray-500 transition-transform duration-200 flex-shrink-0" id="arrow_<?= $dept['id'] ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <span class="text-sm font-semibold text-white truncate max-w-[150px] sm:max-w-xs flex items-center" id="deptName_<?= $dept['id'] ?>">
+                    <img src="/ATTENDANCE/assets/images/staff_icon.png" class="w-10 h-10 inline-block mr-3 object-contain flex-shrink-0" alt="Staff">
+                    <span class="dept-name-text"><?= htmlspecialchars($dept['name']) ?></span>
+                </span>
+                <span class="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded-full font-semibold flex-shrink-0"><?= $deptCount ?></span>
+                
+                <!-- Coordinator Badge -->
+                <span id="deptCoordBadge_<?= $dept['id'] ?>" class="flex-shrink-0">
+                    <?php if (isset($coordMap[$dept['id']])): ?>
+                        <span class="text-[10px] text-primary-400 bg-primary-500/10 border border-primary-500/20 px-2.5 py-0.5 rounded-lg font-medium inline-flex items-center gap-1">
+                            👤 <?= htmlspecialchars($coordMap[$dept['id']]['full_name']) ?>
+                        </span>
+                    <?php else: ?>
+                        <span class="text-[10px] text-gray-500 italic bg-white/5 border border-white/10 px-2.5 py-0.5 rounded-lg font-medium inline-flex items-center gap-1">
+                            No Coordinator
+                        </span>
+                    <?php endif; ?>
+                </span>
+
+                <!-- Action settings button -->
+                <button type="button" onclick="event.stopPropagation(); openDeptSettings(<?= $dept['id'] ?>, '<?= htmlspecialchars($dept['name'], ENT_QUOTES) ?>', <?= $deptCount ?>, <?= isset($coordMap[$dept['id']]) ? $coordMap[$dept['id']]['id'] : 'null' ?>)" class="text-gray-500 hover:text-primary-400 transition-colors ml-1 p-1 hover:bg-white/5 rounded-lg flex-shrink-0" title="Manage Department">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 </button>
             </div>
             <!-- Glowing status summary next to department name -->
@@ -430,7 +474,10 @@ require_once __DIR__ . '/../includes/header.php';
                 <div class="px-5 py-3 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors" onclick="togglePositionFolder('<?= $posKey ?>')">
                     <div class="flex items-center gap-2.5 flex-1">
                         <svg class="w-4 h-4 text-gray-500 transition-transform duration-200" id="pos_arrow_<?= $posKey ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                        <span class="text-sm font-semibold text-gray-200">📂 <?= htmlspecialchars($position) ?></span>
+                        <span class="text-sm font-semibold text-gray-200 flex items-center">
+                            <img src="/ATTENDANCE/assets/images/staff_icon.png" class="w-8 h-8 inline-block mr-2.5 object-contain flex-shrink-0" alt="Position">
+                            <span><?= htmlspecialchars($position) ?></span>
+                        </span>
                         <span class="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded font-semibold"><?= $posCount ?></span>
                         <!-- Glowing position-level status counters -->
                         <div class="flex gap-1.5 ml-2 text-[10px] font-semibold">
@@ -520,20 +567,85 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
-<!-- Edit Department Modal -->
-<div id="editDeptModal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
-    <div class="modal-content" style="max-width:24rem;">
+<!-- Department Settings Modal -->
+<div id="deptSettingsModal" class="modal-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+    <div class="modal-content" style="max-width:30rem;">
         <div class="px-5 py-4 border-b border-white/10 flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-white">✏️ Edit Department</h3>
-            <button onclick="document.getElementById('editDeptModal').classList.remove('show')" class="text-gray-500 hover:text-white text-xl">&times;</button>
+            <h3 class="text-sm font-semibold text-white flex items-center gap-1.5">
+                <span>⚙️ Manage Department:</span>
+                <span id="modalDeptNameTitle" class="text-primary-400 font-bold"></span>
+            </h3>
+            <button onclick="document.getElementById('deptSettingsModal').classList.remove('show')" class="text-gray-500 hover:text-white text-xl">&times;</button>
         </div>
-        <div class="p-5 space-y-4">
-            <input type="hidden" id="editDeptId">
-            <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wider">Department Name</label>
-                <input type="text" id="editDeptName" class="w-full px-4 py-2.5 bg-dark-700/50 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-primary-500/50">
+        <div class="p-5 space-y-5">
+            <!-- Hidden inputs -->
+            <input type="hidden" id="modalDeptId">
+            <input type="hidden" id="modalDeptEmpCount">
+
+            <!-- 1. Rename Department -->
+            <div class="space-y-1.5">
+                <label class="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Rename Department</label>
+                <div class="flex gap-2">
+                    <input type="text" id="modalDeptNameInput" class="flex-1 px-3 py-2 bg-dark-700/50 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-primary-500/50">
+                    <button onclick="submitRenameDept()" class="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all">
+                        Rename
+                    </button>
+                </div>
             </div>
-            <button onclick="saveDept()" class="w-full py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-400 hover:to-primary-500 text-white font-semibold rounded-xl text-sm transition-all">Save</button>
+
+            <!-- 2. Assign Coordinator -->
+            <div class="space-y-1.5 border-t border-white/5 pt-4">
+                <label class="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Assigned Coordinator</label>
+                <div class="flex gap-2">
+                    <select id="modalDeptCoordSelect" class="flex-1 px-3 py-2 bg-dark-700/50 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-primary-500/50">
+                        <option value="none">No Coordinator / Unassigned</option>
+                        <?php foreach ($allCoordinators as $coord): ?>
+                            <option value="<?= $coord['id'] ?>"><?= htmlspecialchars($coord['full_name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button onclick="submitAssignDeptCoord()" class="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all">
+                        Assign
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. Add Employee Directly -->
+            <div class="space-y-2 border-t border-white/5 pt-4">
+                <label class="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Add Employee Directly</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <input type="text" id="modalAddEmpFirst" placeholder="First Name" class="w-full px-3 py-2 bg-dark-700/50 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-primary-500/50">
+                    </div>
+                    <div>
+                        <input type="text" id="modalAddEmpLast" placeholder="Last Name" class="w-full px-3 py-2 bg-dark-700/50 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-primary-500/50">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <input type="text" id="modalAddEmpPos" placeholder="Position (e.g. Staff)" class="w-full px-3 py-2 bg-dark-700/50 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-primary-500/50">
+                    </div>
+                    <div>
+                        <input type="date" id="modalAddEmpDate" class="w-full px-3 py-2 bg-dark-700/50 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-primary-500/50">
+                    </div>
+                </div>
+                <button onclick="submitDirectAddEmp()" class="w-full py-2 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-400 hover:to-primary-500 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all">
+                    + Add Employee
+                </button>
+            </div>
+
+            <!-- 4. Danger Zone -->
+            <div class="space-y-2 border-t border-red-500/20 pt-4">
+                <label class="block text-[10px] font-semibold text-red-400 uppercase tracking-wider">Danger Zone</label>
+                <div class="flex items-center justify-between p-3 bg-red-500/5 border border-red-500/10 rounded-xl">
+                    <div class="pr-2">
+                        <div class="text-xs font-bold text-white">Delete Department</div>
+                        <div class="text-[10px] text-gray-500 mt-0.5" id="deleteDeptHelpText"></div>
+                    </div>
+                    <button id="modalDeleteDeptBtn" onclick="submitDeleteDept()" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+                        Delete
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -563,30 +675,152 @@ function togglePositionFolder(posKey) {
     }
 }
 
-function editDept(id, name) {
-    document.getElementById('editDeptId').value = id;
-    document.getElementById('editDeptName').value = name;
-    document.getElementById('editDeptModal').classList.add('show');
-    setTimeout(() => document.getElementById('editDeptName').focus(), 100);
+function openDeptSettings(id, name, empCount, currentCoordId) {
+    document.getElementById('modalDeptId').value = id;
+    document.getElementById('modalDeptEmpCount').value = empCount;
+    document.getElementById('modalDeptNameTitle').textContent = name;
+    document.getElementById('modalDeptNameInput').value = name;
+
+    // Reset direct add employee form inputs
+    document.getElementById('modalAddEmpFirst').value = '';
+    document.getElementById('modalAddEmpLast').value = '';
+    document.getElementById('modalAddEmpPos').value = '';
+    document.getElementById('modalAddEmpDate').value = new Date().toISOString().substring(0, 10); // Default to today
+
+    // Select the current coordinator
+    const coordSelect = document.getElementById('modalDeptCoordSelect');
+    if (currentCoordId) {
+        coordSelect.value = currentCoordId;
+    } else {
+        coordSelect.value = 'none';
+    }
+
+    // Configure Danger Zone / Delete Button
+    const deleteBtn = document.getElementById('modalDeleteDeptBtn');
+    const helpText = document.getElementById('deleteDeptHelpText');
+    if (empCount > 0) {
+        deleteBtn.disabled = true;
+        helpText.textContent = `This department has ${empCount} employee(s). Move or delete them to enable deletion.`;
+        helpText.classList.remove('text-gray-500');
+        helpText.classList.add('text-red-400');
+    } else {
+        deleteBtn.disabled = false;
+        helpText.textContent = "Permanently delete this department. This action cannot be undone.";
+        helpText.classList.remove('text-red-400');
+        helpText.classList.add('text-gray-500');
+    }
+
+    document.getElementById('deptSettingsModal').classList.add('show');
 }
 
-function saveDept() {
-    const id = document.getElementById('editDeptId').value;
-    const name = document.getElementById('editDeptName').value.trim();
-    if (!name) return;
+function submitRenameDept() {
+    const id = document.getElementById('modalDeptId').value;
+    const name = document.getElementById('modalDeptNameInput').value.trim();
+    if (!name) {
+        alert('Department name cannot be empty');
+        return;
+    }
+
     const fd = new FormData();
     fd.append('id', id);
     fd.append('name', name);
+
     fetch('/ATTENDANCE/api.php?action=update_department', { method: 'POST', body: fd })
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                document.getElementById('deptName_' + id).textContent = '📁 ' + data.name;
-                document.getElementById('editDeptModal').classList.remove('show');
+                // Update the text in the folder header dynamically
+                const deptNameTextEl = document.querySelector('#deptName_' + id + ' .dept-name-text');
+                if (deptNameTextEl) {
+                    deptNameTextEl.textContent = data.name;
+                }
+                document.getElementById('modalDeptNameTitle').textContent = data.name;
+                
+                // Show success feedback
+                alert('Department renamed successfully.');
             } else {
-                alert(data.error || 'Error saving');
+                alert(data.error || 'Failed to rename department');
             }
-        });
+        })
+        .catch(err => alert('Error: ' + err));
+}
+
+function submitAssignDeptCoord() {
+    const deptId = document.getElementById('modalDeptId').value;
+    const coordVal = document.getElementById('modalDeptCoordSelect').value;
+    const coordId = coordVal === 'none' ? 0 : parseInt(coordVal);
+
+    const fd = new FormData();
+    fd.append('department_id', deptId);
+    fd.append('coordinator_id', coordId);
+
+    fetch('/ATTENDANCE/api.php?action=assign_coordinator', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert('Coordinator assignment updated successfully.');
+                location.reload();
+            } else {
+                alert(data.error || 'Failed to assign coordinator');
+            }
+        })
+        .catch(err => alert('Error: ' + err));
+}
+
+function submitDirectAddEmp() {
+    const deptId = document.getElementById('modalDeptId').value;
+    const first = document.getElementById('modalAddEmpFirst').value.trim();
+    const last = document.getElementById('modalAddEmpLast').value.trim();
+    const pos = document.getElementById('modalAddEmpPos').value.trim();
+    const date = document.getElementById('modalAddEmpDate').value;
+
+    if (!first || !last) {
+        alert('First name and last name are required.');
+        return;
+    }
+
+    const fd = new FormData();
+    fd.append('first_name', first);
+    fd.append('last_name', last);
+    fd.append('department_id', deptId);
+    fd.append('position', pos);
+    fd.append('date_hired', date);
+
+    fetch('/ATTENDANCE/api.php?action=add_employee', { method: 'POST', body: fd })
+        .then(() => {
+            alert('Employee added successfully!');
+            location.reload();
+        })
+        .catch(err => alert('Error adding employee: ' + err));
+}
+
+function submitDeleteDept() {
+    const id = document.getElementById('modalDeptId').value;
+    const empCount = parseInt(document.getElementById('modalDeptEmpCount').value || 0);
+
+    if (empCount > 0) {
+        alert('Cannot delete department because it has active employees.');
+        return;
+    }
+
+    if (!confirm('Are you sure you want to permanently delete this department? This cannot be undone.')) {
+        return;
+    }
+
+    const fd = new FormData();
+    fd.append('id', id);
+
+    fetch('/ATTENDANCE/api.php?action=delete_department', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert('Department deleted successfully.');
+                location.reload();
+            } else {
+                alert(data.error || 'Failed to delete department');
+            }
+        })
+        .catch(err => alert('Error: ' + err));
 }
 
 // Auto-expand first folder and initialize status monitoring filters

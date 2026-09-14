@@ -1,6 +1,7 @@
 <?php
 /**
  * Login & Logout — TAASCOR Attendance Monitoring System
+ * Supports both email (@taascor.com) and legacy username login.
  */
 require_once __DIR__ . '/includes/auth.php';
 
@@ -24,53 +25,86 @@ if (isset($_SESSION['user_id'])) {
 }
 
 $error = '';
+$rateLimitMsg = '';
 
 // Handle login POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = trim($_POST['username'] ?? '');
-    $password = $_POST['password'] ?? '';
+    // CSRF validation
+    if (!validateCsrfToken()) {
+        $error = 'Security token expired. Please try again.';
+    } else {
+        $loginIdentifier = strtolower(trim($_POST['login_email'] ?? ''));
+        $password = $_POST['password'] ?? '';
 
-    if ($username && $password) {
-        $db = getDB();
-        $stmt = $db->prepare("SELECT * FROM users WHERE username = ?");
-        $stmt->execute([$username]);
-        $user = $stmt->fetch();
-
-        if ($user) {
-            if ($user['status'] === 'inactive') {
-                $error = 'Your coordinator account is pending administrator approval.';
-            } elseif (password_verify($password, $user['password'])) {
-                // Set session
-                $_SESSION['user_id']       = $user['id'];
-                $_SESSION['username']      = $user['username'];
-                $_SESSION['full_name']     = $user['full_name'];
-                $_SESSION['role']          = $user['role'];
-                $_SESSION['department_id'] = $user['department_id'];
-
-                // Log activity
-                $log = $db->prepare("INSERT INTO activity_log (user_id, action, details) VALUES (?, ?, ?)");
-                $log->execute([$user['id'], 'Login', 'User logged in']);
-
-                // Redirect by role
-                if ($user['role'] === 'admin') {    
-                    header('Location: /ATTENDANCE/admin/dashboard.php');
-                } else {
-                    header('Location: /ATTENDANCE/coordinator/dashboard.php');
-                }
-                exit;
+        if ($loginIdentifier && $password) {
+            // Rate limit check
+            $rateCheck = checkLoginRateLimit($loginIdentifier);
+            if (!$rateCheck['allowed']) {
+                $minutes = ceil($rateCheck['retry_after'] / 60);
+                $error = "Too many login attempts. Please try again in $minutes minute(s).";
             } else {
-                $error = 'Invalid username or password.';
+                $db = getDB();
+
+                // Determine if login is email or username
+                $isEmail = strpos($loginIdentifier, '@') !== false;
+                
+                if ($isEmail) {
+                    $stmt = $db->prepare("SELECT * FROM users WHERE LOWER(email) = ?");
+                } else {
+                    $stmt = $db->prepare("SELECT * FROM users WHERE LOWER(username) = ?");
+                }
+                $stmt->execute([$loginIdentifier]);
+                $user = $stmt->fetch();
+
+                if ($user) {
+                    // Check account lock
+                    $lockCheck = checkAccountLock($user);
+                    if ($lockCheck['locked']) {
+                        $minutes = ceil($lockCheck['retry_after'] / 60);
+                        $error = "Account temporarily locked. Try again in $minutes minute(s).";
+                        recordLoginAttempt($loginIdentifier, false);
+                    } elseif ($user['status'] === 'inactive') {
+                        $error = 'Your coordinator account is pending administrator approval.';
+                        recordLoginAttempt($loginIdentifier, false);
+                    } elseif ($isEmail && empty($user['email_verified'])) {
+                        $error = 'Please verify your email address first. Check your @taascor.com inbox.';
+                        recordLoginAttempt($loginIdentifier, false);
+                    } elseif (password_verify($password, $user['password'])) {
+                        // Successful login
+                        setLoginSession($user);
+                        recordLoginAttempt($loginIdentifier, true);
+                        resetLoginAttempts($user['id']);
+
+                        // Log activity
+                        $log = $db->prepare("INSERT INTO activity_log (user_id, action, details) VALUES (?, ?, ?)");
+                        $log->execute([$user['id'], 'Login', 'User logged in via ' . ($isEmail ? 'email' : 'username')]);
+
+                        // Redirect by role
+                        if ($user['role'] === 'admin') {
+                            header('Location: /ATTENDANCE/admin/dashboard.php');
+                        } else {
+                            header('Location: /ATTENDANCE/coordinator/dashboard.php');
+                        }
+                        exit;
+                    } else {
+                        // Wrong password
+                        incrementLoginAttempts($user['id']);
+                        recordLoginAttempt($loginIdentifier, false);
+                        $error = 'Invalid credentials. Please check your email/username and password.';
+                    }
+                } else {
+                    recordLoginAttempt($loginIdentifier, false);
+                    $error = 'Invalid credentials. Please check your email/username and password.';
+                }
             }
         } else {
-            $error = 'Invalid username or password.';
+            $error = 'Please enter both your email/username and password.';
         }
-    } else {
-        $error = 'Please enter both username and password.';
     }
 }
 ?>
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en" class="min-h-screen">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -94,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/ATTENDANCE/assets/css/custom.css">
 </head>
-<body class="h-full bg-dark-900 font-sans antialiased flex items-center justify-center p-4">
+<body class="min-h-screen bg-dark-900 font-sans antialiased flex items-center justify-center p-4">
     <!-- Animated BG -->
     <div class="login-bg"></div>
 
@@ -117,12 +151,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <!-- Form -->
             <form method="POST" class="space-y-5">
+                <?php csrfField(); ?>
                 <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider">Username</label>
-                    <input type="text" name="username" required autocomplete="username"
-                           value="<?= htmlspecialchars($_POST['username'] ?? '') ?>"
+                    <label class="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider">Business Email or Username</label>
+                    <input type="text" name="login_email" required autocomplete="email"
+                           value="<?= htmlspecialchars($_POST['login_email'] ?? '') ?>"
                            class="w-full px-4 py-3.5 bg-dark-700/50 border border-white/10 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 transition-all text-sm"
-                           placeholder="Enter your username" id="loginUsername">
+                           placeholder="you@taascor.com or username" id="loginEmail">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider">Password</label>

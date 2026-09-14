@@ -44,7 +44,7 @@ foreach ($empsByDeptAndPos as $deptId => &$positions) {
 
 $existing = $db->prepare("SELECT employee_id, status FROM attendance WHERE date = ?");
 $existing->execute([$selectedDate]);
-$existingMap = [];
+$existingMap = [];  
 foreach ($existing->fetchAll() as $a) {
     $existingMap[$a['employee_id']] = $a['status'];
 }
@@ -126,9 +126,17 @@ require_once __DIR__ . '/../includes/header.php';
 <form method="POST" action="/ATTENDANCE/api.php?action=save_attendance" id="attendanceForm">
     <input type="hidden" name="date" value="<?= $selectedDate ?>">
 
-    <!-- Add Department Button -->
-    <div class="flex justify-end mb-3">
-        <button type="button" data-open-add-dept class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-xs font-semibold uppercase tracking-wider transition-all">
+    <!-- Add Department & Search Header -->
+    <div class="flex flex-col md:flex-row items-stretch md:items-center gap-3 mb-4 justify-between">
+        <!-- Live Employee Search -->
+        <div class="relative flex-1 max-w-md">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-gray-500">
+                🔍
+            </span>
+            <input type="text" id="employeeSearchInput" placeholder="Search employee name or position..." class="w-full pl-10 pr-4 py-2.5 bg-dark-800/80 border border-white/10 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:border-primary-500/50 transition-colors">
+        </div>
+        
+        <button type="button" data-open-add-dept class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-xs font-semibold uppercase tracking-wider transition-all flex-shrink-0">
             ➕ Add Department
         </button>
     </div>
@@ -148,7 +156,10 @@ require_once __DIR__ . '/../includes/header.php';
             <div class="glass-card-header" style="cursor:pointer" data-toggle-dept="<?= $dept['id'] ?>">
                 <div class="flex items-center gap-3">
                     <svg class="w-5 h-5 text-gray-500 transition-transform duration-200" data-arrow="<?= $dept['id'] ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                    <span class="text-lg font-bold text-white" data-dept-name="<?= $dept['id'] ?>">📁 <?= htmlspecialchars($dept['name']) ?></span>
+                    <span class="text-lg font-bold text-white flex items-center" data-dept-name="<?= $dept['id'] ?>">
+                        <img src="/ATTENDANCE/assets/images/staff_icon.png" class="w-10 h-10 inline-block mr-3 object-contain flex-shrink-0" alt="Staff">
+                        <span class="dept-name-text"><?= htmlspecialchars($dept['name']) ?></span>
+                    </span>
                     <span class="text-sm text-gray-500 bg-white/5 px-3 py-1 rounded-full font-semibold"><?= $totalCount ?> staff</span>
                     <div class="flex flex-wrap gap-1 ml-2 text-xs" data-dept-summary="<?= $dept['id'] ?>"></div>
                     <button type="button" data-edit-dept="<?= $dept['id'] ?>" data-dept-current="<?= htmlspecialchars($dept['name'], ENT_QUOTES) ?>" class="text-gray-600 hover:text-primary-400 transition-colors ml-auto" title="Edit department">
@@ -170,11 +181,14 @@ require_once __DIR__ . '/../includes/header.php';
                     $posCount = count($emps);
                     $posKey = md5($dept['id'] . $position); // unique key for position folder
                 ?>
-                <div class="bg-white/[0.02] border-l-2 border-primary-600/30">
+                <div class="bg-white/[0.02] border-l-2 border-primary-600/30" data-pos-folder="<?= $posKey ?>">
                     <div class="px-5 py-3 flex items-center justify-between cursor-pointer hover:bg-white/[0.04] transition-colors" data-toggle-position="<?= $posKey ?>">
                         <div class="flex items-center gap-2.5 flex-1">
                             <svg class="w-4 h-4 text-gray-500 transition-transform duration-200" data-pos-arrow="<?= $posKey ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                            <span class="text-sm font-semibold text-gray-200">📂 <?= htmlspecialchars($position) ?></span>
+                            <span class="text-sm font-semibold text-gray-200 flex items-center">
+                                <img src="/ATTENDANCE/assets/images/staff_icon.png" class="w-8 h-8 inline-block mr-2.5 object-contain flex-shrink-0" alt="Position">
+                                <?= htmlspecialchars($position) ?>
+                            </span>
                             <span class="text-sm text-gray-600 bg-white/5 px-2 py-0.5 rounded font-semibold"><?= $posCount ?></span>
                             <div class="flex flex-wrap gap-1 ml-2 text-[10px]" data-pos-summary="<?= $posKey ?>"></div>
                         </div>
@@ -322,6 +336,80 @@ require_once __DIR__ . '/../includes/header.php';
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // --- Live Employee Search ---
+    var searchInput = document.getElementById('employeeSearchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            var query = e.target.value.toLowerCase().trim();
+            var rows = document.querySelectorAll('[data-emp-row]');
+            var deptMatchCount = {};
+            var posMatchCount = {};
+
+            rows.forEach(function(row) {
+                var empName = row.querySelector('[data-empname]').textContent.toLowerCase();
+                var deptId = row.getAttribute('data-emp-dept');
+                var posKey = row.getAttribute('data-emp-pos');
+                
+                var posTextSpan = row.querySelector('.flex-1.min-w-0 span.text-xs');
+                var posText = posTextSpan ? posTextSpan.textContent.toLowerCase() : '';
+                
+                var isMatch = empName.indexOf(query) !== -1 || posText.indexOf(query) !== -1;
+                
+                if (isMatch) {
+                    row.style.setProperty('display', 'flex', 'important');
+                    deptMatchCount[deptId] = (deptMatchCount[deptId] || 0) + 1;
+                    posMatchCount[posKey] = (posMatchCount[posKey] || 0) + 1;
+                } else {
+                    row.style.setProperty('display', 'none', 'important');
+                }
+            });
+
+            // Toggle position folders
+            document.querySelectorAll('[data-pos-folder]').forEach(function(posFolder) {
+                var posKey = posFolder.getAttribute('data-pos-folder');
+                var matches = posMatchCount[posKey] || 0;
+                var posBody = posFolder.querySelector('[data-position-body]');
+                var arrow = posFolder.querySelector('[data-pos-arrow]');
+                
+                if (query === '') {
+                    posFolder.style.display = '';
+                    if (posBody) posBody.style.display = 'none';
+                    if (arrow) arrow.style.transform = '';
+                } else {
+                    if (matches > 0) {
+                        posFolder.style.display = '';
+                        if (posBody) posBody.style.display = '';
+                        if (arrow) arrow.style.transform = 'rotate(90deg)';
+                    } else {
+                        posFolder.style.display = 'none';
+                    }
+                }
+            });
+
+            // Toggle department folders
+            document.querySelectorAll('[data-dept-folder]').forEach(function(deptFolder) {
+                var deptId = deptFolder.getAttribute('data-dept-folder');
+                var matches = deptMatchCount[deptId] || 0;
+                var deptBody = deptFolder.querySelector('[data-dept-body]');
+                var arrow = deptFolder.querySelector('[data-arrow]');
+                
+                if (query === '') {
+                    deptFolder.style.display = '';
+                    if (deptBody) deptBody.style.display = 'none';
+                    if (arrow) arrow.style.transform = '';
+                } else {
+                    if (matches > 0) {
+                        deptFolder.style.display = '';
+                        if (deptBody) deptBody.style.display = '';
+                        if (arrow) arrow.style.transform = 'rotate(90deg)';
+                    } else {
+                        deptFolder.style.display = 'none';
+                    }
+                }
+            });
+        });
+    }
+
     var STATUSES = ['present','absent','no_work','leave','sent_home','rest_day'];
 
     // Function to update button classes
@@ -584,8 +672,8 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (data.success) {
-                    var el = document.querySelector('[data-dept-name="' + id + '"]');
-                    if (el) el.textContent = '📁 ' + data.name;
+                    var el = document.querySelector('[data-dept-name="' + id + '"] .dept-name-text');
+                    if (el) el.textContent = data.name;
                     var editBtn = document.querySelector('[data-edit-dept="' + id + '"]');
                     if (editBtn) editBtn.setAttribute('data-dept-current', data.name);
                     document.getElementById('editDeptModal').classList.remove('show');

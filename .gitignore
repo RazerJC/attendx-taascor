@@ -10,7 +10,17 @@ desktop.ini
 # Batch files (local only)
 *.bat
 
-# Docs/instruction files (not needed online)
+# Shell scripts (only start.sh is needed — others are local)
+run-setup.sh
+diagnostic_and_run.sh
+
+# Word/Office documents (large, not needed in deploy)
+*.docx
+*.xlsx
+*.csv
+~$*
+
+# Instruction / delivery text files (local only)
 00_START_HERE_READ_THIS.txt
 ALL_DONE_READ_THIS.txt
 COMPLETE.txt
@@ -32,8 +42,12 @@ SETUP_COMPLETE.txt
 START_HERE_FINAL.txt
 SYSTEM_READY.txt
 
-# Excel imports (large files)
-*.xlsx
+# Database backups (never commit real DB dumps)
+backups/
+
+# Uploaded files (user data — never commit)
+uploads/*
+!uploads/.htaccess
 
 # Antigravity
 .antigravityignore

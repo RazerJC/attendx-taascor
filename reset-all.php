@@ -1,196 +1,94 @@
 <?php
 /**
- * Complete Database Reset - Drop all tables and recreate
+ * Database Reset Utility — TAASCOR AttendX
+ * DANGER: Highly destructive. Drops and recreates database tables.
+ * Strict protection: requires admin authentication, CSRF token, and explicit confirmation string.
  */
+require_once __DIR__ . '/includes/auth.php';
 
-define('DB_HOST', '127.0.0.1');
-define('DB_NAME', 'taascor_attendance');
-define('DB_USER', 'root');
-define('DB_PASS', '');
+requireAdmin();
 
-try {
-    $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME, DB_USER, DB_PASS);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    
-    echo "Starting complete database reset...\n\n";
-    
-    // Disable foreign key checks
-    $pdo->exec("SET FOREIGN_KEY_CHECKS=0");
-    
-    // Drop all tables
-    $tables = $pdo->query("SHOW TABLES")->fetchAll();
-    foreach ($tables as $table) {
-        $tableName = array_values($table)[0];
-        $pdo->exec("DROP TABLE IF EXISTS `$tableName`");
-        echo "✓ Dropped table: $tableName\n";
-    }
-    
-    echo "\nCreating fresh tables...\n\n";
-    
-    // Create departments
-    $pdo->exec("
-    CREATE TABLE departments (
-        id INT PRIMARY KEY AUTO_INCREMENT,
-        name VARCHAR(100) NOT NULL UNIQUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-    echo "✓ Created: departments\n";
-    
-    // Create users
-    $pdo->exec("
-    CREATE TABLE users (
-        id INT PRIMARY KEY AUTO_INCREMENT,
-        username VARCHAR(50) NOT NULL UNIQUE,
-        password VARCHAR(255) NOT NULL,
-        full_name VARCHAR(100) NOT NULL,
-        role ENUM('admin', 'coordinator') NOT NULL DEFAULT 'coordinator',
-        department_id INT NULL,
-        status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-    echo "✓ Created: users\n";
-    
-    // Create employees
-    $pdo->exec("
-    CREATE TABLE employees (
-        id INT PRIMARY KEY AUTO_INCREMENT,
-        first_name VARCHAR(50) NOT NULL,
-        last_name VARCHAR(50) NOT NULL,
-        department_id INT NOT NULL,
-        position VARCHAR(100),
-        date_hired DATE,
-        status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE RESTRICT,
-        INDEX idx_department (department_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-    echo "✓ Created: employees\n";
-    
-    // Create attendance with ALL required columns
-    $pdo->exec("
-    CREATE TABLE attendance (
-        id INT PRIMARY KEY AUTO_INCREMENT,
-        employee_id INT NOT NULL,
-        date DATE NOT NULL,
-        status ENUM('present', 'absent', 'no_work', 'leave', 'sent_home', 'rest_day') NOT NULL DEFAULT 'present',
-        recorded_by INT,
-        is_late BOOLEAN DEFAULT FALSE,
-        late_minutes INT DEFAULT 0,
-        is_undertime BOOLEAN DEFAULT FALSE,
-        undertime_minutes INT DEFAULT 0,
-        ot_hours DECIMAL(5,2) DEFAULT 0,
-        total_hours DECIMAL(5,2) DEFAULT 0,
-        time_in TIME,
-        time_out TIME,
-        ot_start TIME,
-        ot_end TIME,
-        remarks TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        UNIQUE KEY unique_attendance (employee_id, date),
-        FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
-        FOREIGN KEY (recorded_by) REFERENCES users(id) ON DELETE SET NULL,
-        INDEX idx_date (date),
-        INDEX idx_employee (employee_id),
-        INDEX idx_status (status)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-    echo "✓ Created: attendance\n";
-    
-    // Create activity log
-    $pdo->exec("
-    CREATE TABLE activity_log (
-        id INT PRIMARY KEY AUTO_INCREMENT,
-        user_id INT,
-        action VARCHAR(100) NOT NULL,
-        details TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-        INDEX idx_user (user_id),
-        INDEX idx_action (action),
-        INDEX idx_date (created_at)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-    echo "✓ Created: activity_log\n";
-    
-    // Re-enable foreign key checks
-    $pdo->exec("SET FOREIGN_KEY_CHECKS=1");
-    
-    echo "\nInserting sample data...\n\n";
-    
-    // Insert departments
-    $departments = [
-        'Assigned client',
-        'PH LAG1',
-        'PH LAG2',
-        'PH LAG3',
-        'PH LAG4',
-        'PH LAG5',
-        'PH LAG6',
-        'PH LAG7',
-        'PH LAG8',
-        'PH LAG9',
-        'PH LAG10',
-        'PH LAG11',
-        'PHL- BATINO',
-        'PHE-A',
-        'PHIX-C',
-        'MMIX',
-        'BC MAMATID',
-        'BC SILANGAN',
-        'BICANG'
-    ];
-    $stmt = $pdo->prepare("INSERT INTO departments (name) VALUES (?)");
-    foreach ($departments as $dept) {
-        $stmt->execute([$dept]);
-    }
-    echo "✓ Added departments\n";
-    
-    // Create admin user
-    $adminPassword = password_hash('admin123', PASSWORD_BCRYPT);
-    $stmt = $pdo->prepare("INSERT INTO users (username, password, full_name, role, status) VALUES (?, ?, ?, ?, ?)");
-    $stmt->execute(['admin', $adminPassword, 'Administrator', 'admin', 'active']);
-    echo "✓ Created admin user\n";
-    
-    // Insert sample employees
-    $employees = [
-        ['John Carl', 'Bañares', 1, 'Manager', '2023-01-15'],
-        ['Jane', 'Smith', 2, 'Analyst', '2023-02-20'],
-        ['Bob', 'Johnson', 3, 'Officer', '2023-03-10'],
-        ['Alice', 'Williams', 4, 'Manager', '2023-04-05'],
-        ['Charlie', 'Brown', 5, 'Specialist', '2023-05-12']
-    ];
-    foreach ($employees as $emp) {
-        $stmt = $pdo->prepare("INSERT INTO employees (first_name, last_name, department_id, position, date_hired) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute($emp);
-    }
-    echo "✓ Added 5 sample employees\n";
-    
-    // Insert sample attendance records
-    $admin_id = $pdo->query("SELECT id FROM users WHERE username='admin'")->fetch()['id'];
-    $employees_list = $pdo->query("SELECT id FROM employees LIMIT 5")->fetchAll();
-    
-    $statuses = ['present', 'absent', 'leave'];
-    $count = 0;
-    foreach ($employees_list as $emp) {
-        for ($i = 0; $i < 30; $i++) {
-            $date = date('Y-m-d', strtotime("-$i days"));
-            $status = $statuses[array_rand($statuses)];
-            $stmt = $pdo->prepare("INSERT INTO attendance (employee_id, date, status, recorded_by) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$emp['id'], $date, $status, $admin_id]);
-            $count++;
+$confirmed = false;
+$error = '';
+$results = [];
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = 'Invalid or expired session token.';
+    } elseif (($_POST['confirmation'] ?? '') !== 'CONFIRM_PERMANENT_DATABASE_RESET') {
+        $error = 'Confirmation string did not match. Reset aborted.';
+    } else {
+        try {
+            $db = getDB();
+            $db->exec("SET FOREIGN_KEY_CHECKS = 0");
+            
+            // Drop all tables
+            $tables = $db->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
+            foreach ($tables as $table) {
+                $db->exec("DROP TABLE IF EXISTS `$table`");
+                $results[] = "Dropped table: $table";
+            }
+            
+            // Re-run init schema
+            $sqlFile = __DIR__ . '/init-database.sql';
+            if (file_exists($sqlFile)) {
+                $sql = file_get_contents($sqlFile);
+                $db->exec($sql);
+                $results[] = "Re-initialized schema from init-database.sql";
+            }
+            
+            $db->exec("SET FOREIGN_KEY_CHECKS = 1");
+            $confirmed = true;
+        } catch (Exception $e) {
+            $error = 'Reset failed: ' . $e->getMessage();
         }
     }
-    echo "✓ Added $count sample attendance records\n";
-    
-    echo "\n✅ DATABASE COMPLETELY RESET AND READY!\n\n";
-    echo "LOGIN CREDENTIALS:\n";
-    echo "Username: admin\n";
-    echo "Password: admin123\n\n";
-    echo "Go to: http://localhost/ATTENDANCE/\n";
-    
-} catch (PDOException $e) {
-    echo "❌ ERROR: " . $e->getMessage() . "\n";
-    echo "Stack trace:\n";
-    echo $e->getTraceAsString();
 }
+
+$pageTitle = 'Database Reset Tool';
+require_once __DIR__ . '/includes/header.php';
 ?>
+<div class="p-6 md:p-8 max-w-2xl mx-auto">
+    <div class="bg-red-500/10 border border-red-500/30 rounded-3xl p-8">
+        <h1 class="text-xl font-bold text-red-400 mb-2">⚠️ Danger Zone: Complete Database Reset</h1>
+        <p class="text-xs text-gray-400 leading-relaxed mb-6">
+            This tool will drop <strong>ALL</strong> tables and permanently delete all employee, attendance, user, and department records.
+            This action cannot be undone. Please ensure you have created a backup first via <a href="/ATTENDANCE/backup_database.php" class="text-primary-400 underline">Backup Database</a>.
+        </p>
+
+        <?php if ($error): ?>
+        <div class="mb-6 p-4 bg-red-500/20 border border-red-500/40 rounded-xl text-red-300 text-xs font-semibold">
+            <?= htmlspecialchars($error) ?>
+        </div>
+        <?php endif; ?>
+
+        <?php if ($confirmed): ?>
+        <div class="p-4 bg-green-500/20 border border-green-500/40 rounded-xl text-green-300 text-xs font-semibold mb-6">
+            <p class="font-bold mb-2">✅ Database has been completely reset and re-initialized.</p>
+            <ul class="list-disc list-inside space-y-1 text-[11px] text-green-200">
+                <?php foreach ($results as $res): ?>
+                    <li><?= htmlspecialchars($res) ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+        <a href="/ATTENDANCE/admin/dashboard.php" class="inline-block px-5 py-2.5 bg-primary-600 hover:bg-primary-500 text-white font-bold rounded-xl text-xs uppercase tracking-wider">
+            Return to Dashboard
+        </a>
+        <?php else: ?>
+        <form method="POST" class="space-y-4" onsubmit="return confirm('ARE YOU 100% SURE? All data will be permanently wiped.');">
+            <?= csrfField() ?>
+            <div>
+                <label class="block text-[10px] font-semibold text-gray-300 mb-1 uppercase tracking-wider">
+                    Type <code class="text-red-400 font-mono">CONFIRM_PERMANENT_DATABASE_RESET</code> to proceed:
+                </label>
+                <input type="text" name="confirmation" required autocomplete="off"
+                       class="w-full px-4 py-3 bg-dark-800 border border-red-500/30 rounded-xl text-white font-mono text-xs focus:outline-none focus:border-red-500">
+            </div>
+            <button type="submit" class="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all">
+                Permanently Wipe and Reinitialize Database
+            </button>
+        </form>
+        <?php endif; ?>
+    </div>
+</div>
+<?php require_once __DIR__ . '/includes/footer.php'; ?>

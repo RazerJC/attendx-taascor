@@ -1,18 +1,46 @@
 <?php
 /**
- * TAASCOR Attendance — Auth, Database & Session Helpers
+ * TAASCOR Attendance — Auth, Database, Session & Security Helpers
+ * Enhanced with: session hardening, rate limiting, email auth, department scoping
  */
+
+// --- Secure Session Configuration ---
 if (session_status() === PHP_SESSION_NONE) {
+    // Harden session cookies
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || 
+               (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+    
+    session_set_cookie_params([
+        'lifetime' => 0,            // Session cookie (expires when browser closes)
+        'path'     => '/ATTENDANCE/',
+        'domain'   => '',
+        'secure'   => $isHttps,     // HTTPS only when available
+        'httponly'  => true,         // Prevent JS access
+        'samesite' => 'Strict',     // Prevent CSRF via cookies
+    ]);
+    
+    ini_set('session.use_strict_mode', '1');
+    ini_set('session.use_only_cookies', '1');
+    ini_set('session.cookie_httponly', '1');
+    
     session_start();
 }
 
-// --- Database (env vars for Render.com, fallback for local XAMPP) ---
-define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
-define('DB_NAME', getenv('DB_NAME') ?: 'taascor_attendance');
-define('DB_USER', getenv('DB_USER') ?: 'root');
-define('DB_PASS', getenv('DB_PASS') ?: '');
-define('DB_PORT', getenv('DB_PORT') ?: '3306');
-define('DB_CHARSET', 'utf8mb4');
+// Include CSRF module
+require_once __DIR__ . '/csrf.php';
+
+// Include Mailer module
+require_once __DIR__ . '/mailer.php';
+
+// --- Database (env vars for cloud, fallback for local XAMPP) ---
+if (!defined('DB_HOST')) {
+    define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
+    define('DB_NAME', getenv('DB_NAME') ?: 'taascor_attendance');
+    define('DB_USER', getenv('DB_USER') ?: 'root');
+    define('DB_PASS', getenv('DB_PASS') ?: '');
+    define('DB_PORT', getenv('DB_PORT') ?: '3306');
+    define('DB_CHARSET', 'utf8mb4');
+}
 
 function getDB() {
     static $pdo = null;
@@ -23,6 +51,7 @@ function getDB() {
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES   => false,
+                PDO::ATTR_TIMEOUT            => 10,
             ];
             // Enable SSL for cloud databases (TiDB Cloud requires TLS)
             if (DB_HOST !== '127.0.0.1' && DB_HOST !== 'localhost') {
@@ -34,11 +63,166 @@ function getDB() {
                 }
             }
             $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+
             // Automatic column migration for reset requests
             try {
                 $pdo->query("SELECT reset_requested FROM users LIMIT 1");
             } catch (PDOException $ex) {
                 $pdo->exec("ALTER TABLE users ADD COLUMN reset_requested TINYINT DEFAULT 0");
+            }
+            // Automatic migration for attendance_edit_requests table
+            try {
+                $pdo->query("SELECT 1 FROM attendance_edit_requests LIMIT 1");
+            } catch (PDOException $ex) {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS attendance_edit_requests (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    employee_id INT NOT NULL,
+                    attendance_date DATE NOT NULL,
+                    old_status ENUM('present', 'absent', 'no_work', 'leave', 'sent_home', 'rest_day') NULL,
+                    new_status ENUM('present', 'absent', 'no_work', 'leave', 'sent_home', 'rest_day') NOT NULL,
+                    requested_by INT NOT NULL,
+                    reason TEXT,
+                    status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+                    approved_by INT,
+                    approved_at TIMESTAMP NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
+                    FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE RESTRICT,
+                    FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
+                    INDEX idx_status (status),
+                    INDEX idx_employee (employee_id),
+                    INDEX idx_date (attendance_date),
+                    INDEX idx_requested_by (requested_by)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            }
+            // Automatic migration for absence_warnings table
+            try {
+                $pdo->query("SELECT 1 FROM absence_warnings LIMIT 1");
+            } catch (PDOException $ex) {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS absence_warnings (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    employee_id INT NOT NULL,
+                    warning_level ENUM('1st_warning','2nd_warning','3rd_warning','final_warning') NOT NULL,
+                    absence_count INT NOT NULL DEFAULT 0,
+                    issued_by INT NOT NULL,
+                    remarks TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
+                    FOREIGN KEY (issued_by) REFERENCES users(id) ON DELETE RESTRICT,
+                    INDEX idx_employee (employee_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            }
+            // Automatic migration for report_to_office table
+            try {
+                $pdo->query("SELECT 1 FROM report_to_office LIMIT 1");
+            } catch (PDOException $ex) {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS report_to_office (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    employee_id INT NOT NULL,
+                    reason TEXT NOT NULL,
+                    report_date DATE NOT NULL,
+                    issued_by INT NOT NULL,
+                    status ENUM('pending','completed','no_show') NOT NULL DEFAULT 'pending',
+                    remarks TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
+                    FOREIGN KEY (issued_by) REFERENCES users(id) ON DELETE RESTRICT,
+                    INDEX idx_employee (employee_id),
+                    INDEX idx_status (status)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            }
+            // Automatic migration for back_to_work table
+            try {
+                $pdo->query("SELECT 1 FROM back_to_work LIMIT 1");
+            } catch (PDOException $ex) {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS back_to_work (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    employee_id INT NOT NULL,
+                    evaluation_result TEXT,
+                    status ENUM('pending','approved','failed','requires_further_action') NOT NULL DEFAULT 'pending',
+                    remarks TEXT,
+                    evaluated_by INT,
+                    evaluation_date DATE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
+                    FOREIGN KEY (evaluated_by) REFERENCES users(id) ON DELETE SET NULL,
+                    INDEX idx_employee (employee_id),
+                    INDEX idx_status (status)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            }
+            // Automatic migration: add absence_date to back_to_work table
+            try {
+                $pdo->query("SELECT absence_date FROM back_to_work LIMIT 1");
+            } catch (PDOException $ex) {
+                $pdo->exec("ALTER TABLE back_to_work ADD COLUMN absence_date DATE NULL AFTER employee_id");
+                $pdo->exec("ALTER TABLE back_to_work ADD INDEX idx_absence_date (absence_date)");
+            }
+            // Automatic migration for suspensions table
+            try {
+                $pdo->query("SELECT 1 FROM suspensions LIMIT 1");
+            } catch (PDOException $ex) {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS suspensions (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    employee_id INT NOT NULL,
+                    suspension_date DATE NOT NULL,
+                    end_date DATE,
+                    reason TEXT NOT NULL,
+                    status ENUM('active','lifted','completed') NOT NULL DEFAULT 'active',
+                    issued_by INT NOT NULL,
+                    remarks TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
+                    FOREIGN KEY (issued_by) REFERENCES users(id) ON DELETE RESTRICT,
+                    INDEX idx_employee (employee_id),
+                    INDEX idx_status (status)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            }
+            // Alter report_to_office table status column to include 'requested'
+            try {
+                $pdo->exec("ALTER TABLE report_to_office MODIFY COLUMN status ENUM('requested','pending','completed','no_show') NOT NULL DEFAULT 'pending'");
+            } catch (PDOException $ex) {
+                // Ignore if it fails
+            }
+            // Automatic migration for notifications table
+            try {
+                $pdo->query("SELECT 1 FROM notifications LIMIT 1");
+            } catch (PDOException $ex) {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS notifications (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    user_id INT NOT NULL,
+                    sender_id INT,
+                    type VARCHAR(50) NOT NULL,
+                    message TEXT NOT NULL,
+                    link VARCHAR(255),
+                    is_read BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE SET NULL,
+                    INDEX idx_user (user_id),
+                    INDEX idx_read (is_read)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            }
+            // Automatic migration for chat_messages table
+            try {
+                $pdo->query("SELECT 1 FROM chat_messages LIMIT 1");
+            } catch (PDOException $ex) {
+                $pdo->exec("CREATE TABLE IF NOT EXISTS chat_messages (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    sender_id INT NOT NULL,
+                    receiver_id INT NOT NULL,
+                    message TEXT NOT NULL,
+                    is_read BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+                    INDEX idx_sender (sender_id),
+                    INDEX idx_receiver (receiver_id),
+                    INDEX idx_read (is_read)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
             }
         } catch (PDOException $e) {
             http_response_code(503);
@@ -67,7 +251,18 @@ function getDB() {
 
 // --- Auth ---
 function isLoggedIn() {
-    return isset($_SESSION['user_id']);
+    if (!isset($_SESSION['user_id'])) return false;
+    // Session fingerprint validation
+    if (isset($_SESSION['_fingerprint'])) {
+        $currentFingerprint = hash('sha256', ($_SERVER['HTTP_USER_AGENT'] ?? '') . '|attendx_salt_2026');
+        if (!hash_equals($_SESSION['_fingerprint'], $currentFingerprint)) {
+            // Fingerprint mismatch — possible session hijack
+            session_unset();
+            session_destroy();
+            return false;
+        }
+    }
+    return true;
 }
 
 function currentUser() {
@@ -75,6 +270,7 @@ function currentUser() {
     return [
         'id'            => $_SESSION['user_id'],
         'username'      => $_SESSION['username'],
+        'email'         => $_SESSION['email'] ?? null,
         'full_name'     => $_SESSION['full_name'],
         'role'          => $_SESSION['role'],
         'department_id' => $_SESSION['department_id'] ?? null,
@@ -91,6 +287,7 @@ function requireLogin() {
 function requireAdmin() {
     requireLogin();
     if ($_SESSION['role'] !== 'admin') {
+        http_response_code(403);
         header('Location: /ATTENDANCE/index.php');
         exit;
     }
@@ -99,11 +296,195 @@ function requireAdmin() {
 function requireCoordinator() {
     requireLogin();
     if ($_SESSION['role'] !== 'coordinator') {
+        http_response_code(403);
         header('Location: /ATTENDANCE/index.php');
         exit;
     }
 }
 
+/**
+ * Require that the current user (admin or coordinator) has access to a given department.
+ * Admins can access all departments. Coordinators can only access their assigned department.
+ * @param int $departmentId The department to check access for.
+ */
+function requireDepartmentAccess($departmentId) {
+    requireLogin();
+    if ($_SESSION['role'] === 'admin') return; // Admins see all
+    
+    $userDeptId = $_SESSION['department_id'] ?? null;
+    if ($userDeptId === null || (int)$userDeptId !== (int)$departmentId) {
+        http_response_code(403);
+        if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'You do not have access to this department.']);
+        } else {
+            header('Location: /ATTENDANCE/index.php');
+        }
+        exit;
+    }
+}
+
+/**
+ * Check if a coordinator has access to a specific employee.
+ * @param PDO $db Database connection
+ * @param int $employeeId Employee ID to check
+ */
+function requireEmployeeAccess($db, $employeeId) {
+    requireLogin();
+    if ($_SESSION['role'] === 'admin') return;
+    
+    $stmt = $db->prepare("SELECT department_id FROM employees WHERE id = ?");
+    $stmt->execute([$employeeId]);
+    $emp = $stmt->fetch();
+    
+    if (!$emp) {
+        http_response_code(404);
+        if (isset($_SERVER['HTTP_X_REQUESTED_WITH'])) {
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Employee not found.']);
+        } else {
+            header('Location: /ATTENDANCE/index.php');
+        }
+        exit;
+    }
+    
+    requireDepartmentAccess($emp['department_id']);
+}
+
+/**
+ * Set session variables on successful login.
+ * Regenerates session ID to prevent fixation.
+ */
+function setLoginSession($user) {
+    // Regenerate session ID to prevent session fixation
+    session_regenerate_id(true);
+    
+    $_SESSION['user_id']       = $user['id'];
+    $_SESSION['username']      = $user['username'];
+    $_SESSION['email']         = $user['email'] ?? null;
+    $_SESSION['full_name']     = $user['full_name'];
+    $_SESSION['role']          = $user['role'];
+    $_SESSION['department_id'] = $user['department_id'];
+    $_SESSION['login_time']    = time();
+    
+    // Session fingerprint (User-Agent based)
+    $_SESSION['_fingerprint'] = hash('sha256', ($_SERVER['HTTP_USER_AGENT'] ?? '') . '|attendx_salt_2026');
+}
+
+// --- Rate Limiting ---
+
+/**
+ * Check if login attempts from this IP/identifier are rate-limited.
+ * @return array ['allowed' => bool, 'remaining' => int, 'retry_after' => int seconds]
+ */
+function checkLoginRateLimit($identifier) {
+    $db = getDB();
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    $windowMinutes = 15;
+    $maxAttempts = 10;
+    
+    // Clean old entries (older than 1 hour)
+    try {
+        $db->exec("DELETE FROM login_rate_limits WHERE attempted_at < DATE_SUB(NOW(), INTERVAL 1 HOUR)");
+    } catch (PDOException $e) {
+        // Table might not exist yet, allow login
+        return ['allowed' => true, 'remaining' => $maxAttempts, 'retry_after' => 0];
+    }
+    
+    // Count recent failed attempts from this IP
+    try {
+        $stmt = $db->prepare("SELECT COUNT(*) FROM login_rate_limits WHERE ip_address = ? AND success = 0 AND attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)");
+        $stmt->execute([$ip, $windowMinutes]);
+        $failedCount = (int)$stmt->fetchColumn();
+    } catch (PDOException $e) {
+        return ['allowed' => true, 'remaining' => $maxAttempts, 'retry_after' => 0];
+    }
+    
+    if ($failedCount >= $maxAttempts) {
+        // Find when the oldest relevant attempt was
+        $stmt = $db->prepare("SELECT MIN(attempted_at) FROM login_rate_limits WHERE ip_address = ? AND success = 0 AND attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)");
+        $stmt->execute([$ip, $windowMinutes]);
+        $oldest = $stmt->fetchColumn();
+        $retryAfter = $oldest ? max(0, ($windowMinutes * 60) - (time() - strtotime($oldest))) : 60;
+        
+        return ['allowed' => false, 'remaining' => 0, 'retry_after' => $retryAfter];
+    }
+    
+    return ['allowed' => true, 'remaining' => $maxAttempts - $failedCount, 'retry_after' => 0];
+}
+
+/**
+ * Record a login attempt.
+ */
+function recordLoginAttempt($identifier, $success) {
+    try {
+        $db = getDB();
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+        $stmt = $db->prepare("INSERT INTO login_rate_limits (ip_address, email_or_username, success) VALUES (?, ?, ?)");
+        $stmt->execute([$ip, $identifier, $success ? 1 : 0]);
+        
+        // If successful, clear previous failures for this IP
+        if ($success) {
+            $db->prepare("DELETE FROM login_rate_limits WHERE ip_address = ? AND success = 0")->execute([$ip]);
+        }
+    } catch (PDOException $e) {
+        // Silently fail — don't block login if rate limit table missing
+    }
+}
+
+/**
+ * Check if a user account is locked due to too many failed attempts.
+ * @return array ['locked' => bool, 'retry_after' => int seconds]
+ */
+function checkAccountLock($user) {
+    if (!empty($user['locked_until'])) {
+        $lockedUntil = strtotime($user['locked_until']);
+        if ($lockedUntil > time()) {
+            return ['locked' => true, 'retry_after' => $lockedUntil - time()];
+        }
+    }
+    return ['locked' => false, 'retry_after' => 0];
+}
+
+/**
+ * Increment login attempts on a user account and lock if exceeded.
+ */
+function incrementLoginAttempts($userId) {
+    try {
+        $db = getDB();
+        $lockThreshold = 10;
+        $lockDuration = 30; // minutes
+        
+        $db->prepare("UPDATE users SET login_attempts = login_attempts + 1 WHERE id = ?")->execute([$userId]);
+        
+        // Check if threshold exceeded
+        $stmt = $db->prepare("SELECT login_attempts FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $attempts = (int)$stmt->fetchColumn();
+        
+        if ($attempts >= $lockThreshold) {
+            $db->prepare("UPDATE users SET locked_until = DATE_ADD(NOW(), INTERVAL ? MINUTE) WHERE id = ?")
+               ->execute([$lockDuration, $userId]);
+        }
+    } catch (PDOException $e) {
+        // Silently fail
+    }
+}
+
+/**
+ * Reset login attempts on successful login.
+ */
+function resetLoginAttempts($userId) {
+    try {
+        $db = getDB();
+        $db->prepare("UPDATE users SET login_attempts = 0, locked_until = NULL, last_login = NOW() WHERE id = ?")
+           ->execute([$userId]);
+    } catch (PDOException $e) {
+        // Silently fail
+    }
+}
+
+// --- Activity Logging ---
 function logActivity($action, $details = '') {
     try {
         $db = getDB();
@@ -115,6 +496,7 @@ function logActivity($action, $details = '') {
     }
 }
 
+// --- Flash Messages ---
 function setFlash($type, $message) {
     $_SESSION['flash'] = ['type' => $type, 'message' => $message];
 }
@@ -170,4 +552,22 @@ function getVisibleEmployees($db) {
     ");
     $stmt->execute([$deptId]);
     return $stmt->fetchAll();
+}
+
+/**
+ * Validate a date string format.
+ * @return bool
+ */
+function isValidDate($dateStr, $format = 'Y-m-d') {
+    $d = DateTime::createFromFormat($format, $dateStr);
+    return $d && $d->format($format) === $dateStr;
+}
+
+/**
+ * Validate a positive integer.
+ * @return int|false
+ */
+function validatePositiveInt($value) {
+    $val = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    return $val !== false ? $val : false;
 }

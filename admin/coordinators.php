@@ -1,7 +1,7 @@
 <?php
 /**
  * Admin — Coordinator Management
- * Handle coordinator approvals, deactivation, department assignments, and password resets.
+ * Handle coordinator approvals, deactivation, department assignments, email verification, and password resets.
  */
 require_once __DIR__ . '/../includes/auth.php';
 requireAdmin();
@@ -12,13 +12,19 @@ $departments = $db->query("SELECT * FROM departments ORDER BY name")->fetchAll()
 
 // Handle Actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
+        setFlash('error', 'Invalid or expired session token. Please try again.');
+        header('Location: /ATTENDANCE/admin/coordinators.php');
+        exit;
+    }
+
     $action = $_POST['action'];
     $userId = (int)($_POST['user_id'] ?? 0);
 
     if ($userId > 0) {
         if ($action === 'approve') {
             $deptId = $_POST['department_id'] ?? null;
-            $deptVal = $deptId === 'none' || empty($deptId) ? null : (int)$deptId;
+            $deptVal = ($deptId === 'none' || empty($deptId)) ? null : (int)$deptId;
             
             $stmt = $db->prepare("UPDATE users SET status = 'active', department_id = ?, reset_requested = 0 WHERE id = ?");
             if ($stmt->execute([$deptVal, $userId])) {
@@ -37,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
         } elseif ($action === 'assign_dept') {
             $deptId = $_POST['department_id'] ?? null;
-            $deptVal = $deptId === 'none' || empty($deptId) ? null : (int)$deptId;
+            $deptVal = ($deptId === 'none' || empty($deptId)) ? null : (int)$deptId;
             
             $stmt = $db->prepare("UPDATE users SET department_id = ? WHERE id = ?");
             if ($stmt->execute([$deptVal, $userId])) {
@@ -46,22 +52,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             } else {
                 setFlash('error', 'Failed to assign department.');
             }
+        } elseif ($action === 'resend_verification') {
+            $cUser = $db->prepare("SELECT email, full_name FROM users WHERE id = ?");
+            $cUser->execute([$userId]);
+            $cu = $cUser->fetch();
+            if ($cu && !empty($cu['email'])) {
+                $token = generateSecureToken();
+                $db->prepare("UPDATE users SET email_verification_token = ?, email_verification_expires = DATE_ADD(NOW(), INTERVAL 24 HOUR) WHERE id = ?")->execute([$token, $userId]);
+                $mailRes = sendVerificationEmail($cu['email'], $token, $cu['full_name']);
+                if ($mailRes['success']) {
+                    setFlash('success', 'Verification email dispatched to ' . htmlspecialchars($cu['email']));
+                } else {
+                    setFlash('error', 'Failed to send verification email: ' . $mailRes['message']);
+                }
+            } else {
+                setFlash('error', 'Coordinator does not have a registered @taascor.com business email.');
+            }
         } elseif ($action === 'reset_password') {
             $newPassword = $_POST['new_password'] ?? '';
-            if (strlen($newPassword) < 6) {
-                setFlash('error', 'Password must be at least 6 characters.');
+            if (strlen($newPassword) < 8 || !preg_match('/[A-Za-z]/', $newPassword) || !preg_match('/[0-9]/', $newPassword)) {
+                setFlash('error', 'Password must be at least 8 characters and include both letters and numbers.');
             } else {
                 $hashed = password_hash($newPassword, PASSWORD_BCRYPT);
-                $stmt = $db->prepare("UPDATE users SET password = ?, reset_requested = 0 WHERE id = ?");
+                $stmt = $db->prepare("UPDATE users SET password = ?, reset_requested = 0, login_attempts = 0, locked_until = NULL WHERE id = ?");
                 if ($stmt->execute([$hashed, $userId])) {
                     logActivity('Coordinator Password Reset', "Reset password for coordinator ID: $userId");
+                    
+                    // Create notification for coordinator
+                    try {
+                        $notifStmt = $db->prepare("INSERT INTO notifications (user_id, sender_id, type, message, link) VALUES (?, ?, 'password_reset_completed', 'Your password has been reset by the Administrator.', '/ATTENDANCE/index.php')");
+                        $notifStmt->execute([$userId, $_SESSION['user_id']]);
+                    } catch (PDOException $ex) {}
+
                     setFlash('success', 'Password reset successfully.');
                 } else {
                     setFlash('error', 'Failed to reset password.');
                 }
             }
         } elseif ($action === 'delete') {
-            // Delete user
             $stmt = $db->prepare("DELETE FROM users WHERE id = ? AND role = 'coordinator'");
             if ($stmt->execute([$userId])) {
                 logActivity('Coordinator Account Deleted', "Deleted coordinator ID: $userId");
@@ -75,9 +103,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     exit;
 }
 
-// Fetch all coordinators
+// Fetch all coordinators including email and verification status
 $coordinators = $db->query("
-    SELECT u.id, u.username, u.full_name, u.status, u.reset_requested, u.department_id, d.name as dept_name
+    SELECT u.id, u.username, u.email, u.email_verified, u.full_name, u.status, u.reset_requested, u.department_id, d.name as dept_name
     FROM users u
     LEFT JOIN departments d ON u.department_id = d.id
     WHERE u.role = 'coordinator'
@@ -91,7 +119,7 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="flex justify-between items-center mb-5">
     <div>
         <h2 class="text-lg font-bold text-white">Coordinators Directory</h2>
-        <p class="text-xs text-gray-500">Manage, approve, or reset passwords for coordinators</p>
+        <p class="text-xs text-gray-500">Manage @taascor.com business emails, approvals, and security settings</p>
     </div>
 </div>
 
@@ -105,21 +133,54 @@ require_once __DIR__ . '/../includes/header.php';
             <thead>
                 <tr>
                     <th>Full Name</th>
-                    <th>Username</th>
+                    <th>Business Email / Username</th>
+                    <th>Email Status</th>
                     <th>Assigned Department</th>
-                    <th>Status</th>
-                    <th>Password Reset Request</th>
+                    <th>Account Status</th>
+                    <th>Reset Request</th>
                     <th class="text-right">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($coordinators)): ?>
-                    <tr><td colspan="6" class="text-center text-gray-600 py-8">No coordinator accounts found.</td></tr>
+                    <tr><td colspan="7" class="text-center text-gray-600 py-8">No coordinator accounts found.</td></tr>
                 <?php else: ?>
                     <?php foreach ($coordinators as $c): ?>
                     <tr class="text-white hover:bg-white/[0.01]">
                         <td class="font-bold"><?= htmlspecialchars($c['full_name']) ?></td>
-                        <td class="text-gray-400 font-mono"><?= htmlspecialchars($c['username']) ?></td>
+                        <td>
+                            <?php if (!empty($c['email'])): ?>
+                                <div class="text-xs font-semibold text-primary-300"><?= htmlspecialchars($c['email']) ?></div>
+                                <div class="text-[10px] text-gray-500 font-mono">@<?= htmlspecialchars($c['username']) ?></div>
+                            <?php else: ?>
+                                <span class="text-gray-400 font-mono text-xs">@<?= htmlspecialchars($c['username']) ?></span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if (!empty($c['email'])): ?>
+                                <?php if (!empty($c['email_verified'])): ?>
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-500/10 text-green-400 border border-green-500/20">
+                                        ✓ Verified
+                                    </span>
+                                <?php else: ?>
+                                    <div class="flex items-center gap-2">
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                            ⏳ Unverified
+                                        </span>
+                                        <form method="POST" style="display:inline;">
+                                            <?= csrfField() ?>
+                                            <input type="hidden" name="action" value="resend_verification">
+                                            <input type="hidden" name="user_id" value="<?= $c['id'] ?>">
+                                            <button type="submit" class="text-[10px] text-primary-400 hover:underline" title="Resend verification email">
+                                                Resend
+                                            </button>
+                                        </form>
+                                    </div>
+                                <?php endif; ?>
+                            <?php else: ?>
+                                <span class="text-gray-600 text-xs italic">Not Linked</span>
+                            <?php endif; ?>
+                        </td>
                         <td>
                             <?php if ($c['dept_name']): ?>
                                 <span class="badge badge-present"><?= htmlspecialchars($c['dept_name']) ?></span>
@@ -147,10 +208,11 @@ require_once __DIR__ . '/../includes/header.php';
                             <?php if ($c['status'] === 'inactive'): ?>
                                 <button onclick="openApproveModal(<?= $c['id'] ?>, '<?= htmlspecialchars($c['full_name'], ENT_QUOTES) ?>')" 
                                         class="text-xs text-green-400 hover:text-green-300 font-semibold mr-3">
-                                    ✅ Approve & Activate
+                                    ✅ Approve
                                 </button>
                             <?php else: ?>
                                 <form method="POST" style="display:inline;" onsubmit="return confirm('Deactivate coordinator <?= htmlspecialchars($c['full_name'], ENT_QUOTES) ?>?');">
+                                    <?= csrfField() ?>
                                     <input type="hidden" name="action" value="deactivate">
                                     <input type="hidden" name="user_id" value="<?= $c['id'] ?>">
                                     <button type="submit" class="text-xs text-amber-400 hover:text-amber-300 font-semibold mr-3">Deactivate</button>
@@ -158,8 +220,9 @@ require_once __DIR__ . '/../includes/header.php';
                             <?php endif; ?>
 
                             <button onclick="openAssignModal(<?= $c['id'] ?>, '<?= htmlspecialchars($c['full_name'], ENT_QUOTES) ?>', '<?= $c['department_id'] ?: 'none' ?>')" 
-                                    class="text-xs text-primary-400 hover:text-primary-300 font-semibold mr-3">
-                                📁 Assign Dept
+                                    class="text-xs text-primary-400 hover:text-primary-300 font-semibold mr-3 inline-flex items-center gap-1.5">
+                                <img src="/ATTENDANCE/assets/images/staff_icon.png" class="w-6 h-6 inline-block object-contain flex-shrink-0" alt="Staff">
+                                <span>Assign Dept</span>
                             </button>
 
                             <button onclick="openResetModal(<?= $c['id'] ?>, '<?= htmlspecialchars($c['full_name'], ENT_QUOTES) ?>')" 
@@ -168,6 +231,7 @@ require_once __DIR__ . '/../includes/header.php';
                             </button>
 
                             <form method="POST" style="display:inline;" onsubmit="return confirm('Permanently delete coordinator <?= htmlspecialchars($c['full_name'], ENT_QUOTES) ?>? This cannot be undone.');">
+                                <?= csrfField() ?>
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="user_id" value="<?= $c['id'] ?>">
                                 <button type="submit" class="text-xs text-red-400 hover:text-red-300 font-semibold">Delete</button>
@@ -189,6 +253,7 @@ require_once __DIR__ . '/../includes/header.php';
             <button onclick="document.getElementById('approveModal').classList.remove('show')" class="text-gray-500 hover:text-white text-xl">&times;</button>
         </div>
         <form method="POST" class="p-5 space-y-4">
+            <?= csrfField() ?>
             <input type="hidden" name="action" value="approve">
             <input type="hidden" name="user_id" id="approveUserId">
             <div>
@@ -218,6 +283,7 @@ require_once __DIR__ . '/../includes/header.php';
             <button onclick="document.getElementById('assignModal').classList.remove('show')" class="text-gray-500 hover:text-white text-xl">&times;</button>
         </div>
         <form method="POST" class="p-5 space-y-4">
+            <?= csrfField() ?>
             <input type="hidden" name="action" value="assign_dept">
             <input type="hidden" name="user_id" id="assignUserId">
             <div>
@@ -247,6 +313,7 @@ require_once __DIR__ . '/../includes/header.php';
             <button onclick="document.getElementById('resetModal').classList.remove('show')" class="text-gray-500 hover:text-white text-xl">&times;</button>
         </div>
         <form method="POST" class="p-5 space-y-4">
+            <?= csrfField() ?>
             <input type="hidden" name="action" value="reset_password">
             <input type="hidden" name="user_id" id="resetUserId">
             <div>
@@ -254,7 +321,7 @@ require_once __DIR__ . '/../includes/header.php';
                     Type a new password for <strong id="resetName" class="text-white"></strong>.
                 </p>
                 <label class="block text-[10px] font-semibold text-gray-400 mb-1.5 uppercase">New Password</label>
-                <input type="password" name="new_password" required minlength="6" placeholder="Min 6 characters" 
+                <input type="password" name="new_password" required minlength="8" placeholder="Min 8 chars, letters + numbers" 
                        class="w-full px-3 py-2 bg-dark-700/50 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-primary-500/50">
             </div>
             <button type="submit" class="w-full py-2.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-400 hover:to-purple-500 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all">

@@ -76,7 +76,10 @@ require_once __DIR__ . '/../includes/header.php';
     ?>
     <div class="glass-card">
         <div class="glass-card-header">
-            <span class="text-sm font-semibold text-white">📁 <?= htmlspecialchars($dept['name']) ?></span>
+            <span class="text-sm font-semibold text-white flex items-center">
+                <img src="/ATTENDANCE/assets/images/staff_icon.png" class="w-10 h-10 inline-block mr-3 object-contain flex-shrink-0" alt="Staff">
+                <span><?= htmlspecialchars($dept['name']) ?></span>
+            </span>
             <span class="text-xs text-gray-500"><?= count($deptEmps) ?> employees</span>
         </div>
         <div class="table-wrap">

@@ -13,35 +13,54 @@ $uploadMessage = '';
 $uploadError = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['master_file'])) {
-    $file = $_FILES['master_file'];
-    
-    // Validate file
-    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    $allowed = ['xlsx', 'xls'];
-    
-    if (!in_array($ext, $allowed)) {
-        $uploadError = 'Invalid file type. Only Excel files (.xlsx, .xls) are allowed.';
-    } elseif ($file['size'] > 10 * 1024 * 1024) { // 10MB limit
-        $uploadError = 'File size is too large. Maximum size is 10MB.';
-    } elseif ($file['error'] !== UPLOAD_ERR_OK) {
-        $uploadError = 'Error uploading file. Please try again.';
+    if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
+        $uploadError = 'Invalid or expired session token.';
     } else {
-        // Create uploads directory if not exists
-        $uploadDir = __DIR__ . '/../uploads/';
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
-        }
+        $file = $_FILES['master_file'];
         
-        // Format filename: Master_File_YYYY-MM-DD_HHMMSS.xlsx
-        $filename = 'Master_File_' . date('Y-m-d_His') . '.' . $ext;
-        $destPath = $uploadDir . $filename;
+        // Validate file
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $allowed = ['xlsx', 'xls', 'csv'];
         
-        if (move_uploaded_file($file['tmp_name'], $destPath)) {
-            // Log activity
-            logActivity('Master File Uploaded', "Uploaded file: $filename");
-            $uploadMessage = "✅ File '$filename' uploaded successfully!";
+        if (!in_array($ext, $allowed, true)) {
+            $uploadError = 'Invalid file type. Only Excel and CSV files are allowed.';
+        } elseif ($file['size'] > 10 * 1024 * 1024) { // 10MB limit
+            $uploadError = 'File size is too large. Maximum size is 10MB.';
+        } elseif ($file['error'] !== UPLOAD_ERR_OK) {
+            $uploadError = 'Error uploading file. Please try again.';
         } else {
-            $uploadError = 'Failed to save uploaded file.';
+            // Verify MIME type using finfo
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime = finfo_file($finfo, $file['tmp_name']);
+            finfo_close($finfo);
+            $allowedMimes = [
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-excel',
+                'application/octet-stream',
+                'application/zip',
+                'text/plain',
+                'text/csv'
+            ];
+            if (!in_array($mime, $allowedMimes, true)) {
+                $uploadError = 'Invalid file format. Upload rejected.';
+            } else {
+                // Create uploads directory if not exists
+                $uploadDir = __DIR__ . '/../uploads/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                
+                // Format safe filename: Master_File_YYYY-MM-DD_HHMMSS.xlsx
+                $filename = 'Master_File_' . date('Y-m-d_His') . '.' . $ext;
+                $destPath = $uploadDir . $filename;
+                
+                if (move_uploaded_file($file['tmp_name'], $destPath)) {
+                    logActivity('Master File Uploaded', "Uploaded file: $filename");
+                    $uploadMessage = "✅ File '$filename' uploaded successfully!";
+                } else {
+                    $uploadError = 'Failed to save uploaded file.';
+                }
+            }
         }
     }
 }
@@ -207,7 +226,7 @@ $isFutureDate = strtotime($selectedDate) > strtotime($today);
             return count($emps) > 0;
         });
         
-        $maxPosCount = max(array_map('count', $activePosns));
+        $maxPosCount = !empty($activePosns) ? max(array_map('count', $activePosns)) : 1;
         
         foreach ($activePosns as $position => $emps): 
             $posCount = count($emps);
@@ -314,7 +333,10 @@ $isFutureDate = strtotime($selectedDate) > strtotime($today);
         <div class="glass-card-header cursor-pointer select-none hover:bg-white/[0.02] transition-colors" onclick="toggleFolder(<?= $dept['id'] ?>)">
             <div class="flex items-center gap-2">
                 <svg class="w-4 h-4 text-gray-500 transition-transform duration-200" id="arrow_<?= $dept['id'] ?>" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                <span class="text-sm font-semibold text-white" id="deptName_<?= $dept['id'] ?>">📁 <?= htmlspecialchars($dept['name']) ?></span>
+                <span class="text-sm font-semibold text-white flex items-center" id="deptName_<?= $dept['id'] ?>">
+                    <img src="/ATTENDANCE/assets/images/staff_icon.png" class="w-10 h-10 inline-block mr-3 object-contain flex-shrink-0" alt="Staff">
+                    <span class="dept-name-text"><?= htmlspecialchars($dept['name']) ?></span>
+                </span>
                 <span class="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded-full"><?= $deptCount ?></span>
                 <button type="button" onclick="event.stopPropagation(); editDept(<?= $dept['id'] ?>, '<?= htmlspecialchars($dept['name'], ENT_QUOTES) ?>')" class="text-gray-600 hover:text-primary-400 transition-colors ml-1" title="Edit department name">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
@@ -402,7 +424,8 @@ function saveDept() {
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                document.getElementById('deptName_' + id).textContent = '📁 ' + data.name;
+                const nameEl = document.querySelector('#deptName_' + id + ' .dept-name-text');
+                if (nameEl) nameEl.textContent = data.name;
                 document.getElementById('editDeptModal').classList.remove('show');
             } else {
                 alert(data.error || 'Error saving');

@@ -13,6 +13,15 @@ CREATE TABLE IF NOT EXISTS departments (
 CREATE TABLE IF NOT EXISTS users (
     id INT PRIMARY KEY AUTO_INCREMENT,
     username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(255) NULL UNIQUE,
+    email_verified TINYINT NOT NULL DEFAULT 0,
+    email_verification_token VARCHAR(64) NULL,
+    email_verification_expires DATETIME NULL,
+    password_reset_token VARCHAR(64) NULL,
+    password_reset_expires DATETIME NULL,
+    login_attempts INT NOT NULL DEFAULT 0,
+    locked_until DATETIME NULL,
+    last_login DATETIME NULL,
     password VARCHAR(255) NOT NULL,
     full_name VARCHAR(100) NOT NULL,
     role ENUM('admin', 'coordinator') NOT NULL DEFAULT 'coordinator',
@@ -20,7 +29,8 @@ CREATE TABLE IF NOT EXISTS users (
     status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL
+    FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL,
+    INDEX idx_email_unique (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Employees Table
@@ -101,6 +111,28 @@ CREATE TABLE IF NOT EXISTS attendance_edit_requests (
     INDEX idx_employee (employee_id),
     INDEX idx_date (attendance_date),
     INDEX idx_requested_by (requested_by)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Login Rate Limits Table (IP & Account Lockout)
+CREATE TABLE IF NOT EXISTS login_rate_limits (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    ip_address VARCHAR(45) NOT NULL,
+    email_or_username VARCHAR(255) NOT NULL,
+    attempted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    success TINYINT NOT NULL DEFAULT 0,
+    INDEX idx_ip (ip_address),
+    INDEX idx_email (email_or_username),
+    INDEX idx_time (attempted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- CSRF Tokens Table
+CREATE TABLE IF NOT EXISTS csrf_tokens (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    session_id VARCHAR(128) NOT NULL,
+    token VARCHAR(64) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_session (session_id),
+    INDEX idx_token (token)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Insert default admin user (password hash is updated by start.sh at runtime)

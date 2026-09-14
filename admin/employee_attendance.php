@@ -8,17 +8,47 @@ requireAdmin();
 $db = getDB();
 $pageTitle = 'Employee Attendance';
 
-// All active employees for dropdown
-$employees = $db->query("
-    SELECT e.id, CONCAT(e.last_name, ', ', e.first_name) as full_name, d.name as dept_name
+// Get all departments for the department dropdown
+$departments = $db->query("SELECT * FROM departments ORDER BY name")->fetchAll();
+
+// Get selected department filter
+$selectedDeptId = $_GET['dept'] ?? '';
+
+// Build employees query based on department filter
+$empQuery = "
+    SELECT e.id, CONCAT(e.last_name, ', ', e.first_name) as full_name, d.id as dept_id, d.name as dept_name
     FROM employees e
     JOIN departments d ON e.department_id = d.id
     WHERE e.status = 'active'
-    ORDER BY e.last_name, e.first_name
-")->fetchAll();
+";
+$empParams = [];
+if ($selectedDeptId) {
+    $empQuery .= " AND e.department_id = ?";
+    $empParams[] = $selectedDeptId;
+}
+$empQuery .= " ORDER BY e.last_name, e.first_name";
+$empStmt = $db->prepare($empQuery);
+$empStmt->execute($empParams);
+$employees = $empStmt->fetchAll();
 
 // Selected employee, month, year
-$empId = $_GET['emp'] ?? ($employees[0]['id'] ?? 0);
+$empId = $_GET['emp'] ?? '';
+if (!$empId && count($employees) > 0) {
+    $empId = $employees[0]['id'];
+}
+// If an employee was selected but doesn't belong to the selected department, pick the first one of the filtered list
+if ($empId && !empty($employees)) {
+    $found = false;
+    foreach ($employees as $e) {
+        if ($e['id'] == $empId) {
+            $found = true;
+            break;
+        }
+    }
+    if (!$found) {
+        $empId = $employees[0]['id'];
+    }
+}
 $month = (int)($_GET['month'] ?? date('n'));
 $year  = (int)($_GET['year']  ?? date('Y'));
 
@@ -29,9 +59,12 @@ if ($year < 2020) $year = 2020;
 if ($year > 2030) $year = 2030;
 
 // Get employee info
-$empStmt = $db->prepare("SELECT e.*, d.name as dept_name FROM employees e JOIN departments d ON e.department_id = d.id WHERE e.id = ?");
-$empStmt->execute([$empId]);
-$employee = $empStmt->fetch();
+$employee = null;
+if ($empId) {
+    $empStmt = $db->prepare("SELECT e.*, d.name as dept_name FROM employees e JOIN departments d ON e.department_id = d.id WHERE e.id = ?");
+    $empStmt->execute([$empId]);
+    $employee = $empStmt->fetch();
+}
 
 // Get attendance records for the month
 $dateFrom = sprintf('%04d-%02d-01', $year, $month);
@@ -76,23 +109,40 @@ require_once __DIR__ . '/../includes/header.php';
 
 <!-- Filters -->
 <form method="GET" class="flex flex-col sm:flex-row flex-wrap gap-3 mb-5">
-    <select name="emp" class="flex-1 min-w-[200px] px-3 py-2.5 bg-dark-700/50 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-primary-500/50" onchange="this.form.submit()">
-        <?php foreach ($employees as $e): ?>
-        <option value="<?= $e['id'] ?>" <?= $empId == $e['id'] ? 'selected' : '' ?>><?= htmlspecialchars($e['full_name']) ?> — <?= htmlspecialchars($e['dept_name']) ?></option>
+    <!-- Department Selector -->
+    <select name="dept" class="px-3 py-2.5 bg-dark-700/50 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-primary-500/50 min-w-[160px]" onchange="document.getElementById('empSelect').value = ''; this.form.submit();">
+        <option value="">All Departments</option>
+        <?php foreach ($departments as $d): ?>
+        <option value="<?= $d['id'] ?>" <?= $selectedDeptId == $d['id'] ? 'selected' : '' ?>><?= htmlspecialchars($d['name']) ?></option>
         <?php endforeach; ?>
     </select>
-    <select name="month" class="px-3 py-2.5 bg-dark-700/50 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-primary-500/50 min-w-[140px]">
+
+    <!-- Employee Selector -->
+    <select name="emp" id="empSelect" class="flex-1 min-w-[200px] px-3 py-2.5 bg-dark-700/50 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-primary-500/50" onchange="this.form.submit()">
+        <?php if (empty($employees)): ?>
+            <option value="">No employees found</option>
+        <?php else: ?>
+            <option value="">Select Employee</option>
+            <?php foreach ($employees as $e): ?>
+            <option value="<?= $e['id'] ?>" <?= $empId == $e['id'] ? 'selected' : '' ?>><?= htmlspecialchars($e['full_name']) ?></option>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </select>
+
+    <select name="month" class="px-3 py-2.5 bg-dark-700/50 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-primary-500/50 min-w-[140px]" onchange="this.form.submit()">
         <?php for ($m = 1; $m <= 12; $m++): ?>
         <option value="<?= $m ?>" <?= $month == $m ? 'selected' : '' ?>><?= $monthNames[$m] ?></option>
         <?php endfor; ?>
     </select>
-    <select name="year" class="px-3 py-2.5 bg-dark-700/50 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-primary-500/50 min-w-[100px]">
+
+    <select name="year" class="px-3 py-2.5 bg-dark-700/50 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-primary-500/50 min-w-[100px]" onchange="this.form.submit()">
         <?php for ($y = 2024; $y <= 2030; $y++): ?>
         <option value="<?= $y ?>" <?= $year == $y ? 'selected' : '' ?>><?= $y ?></option>
         <?php endfor; ?>
     </select>
+
     <button type="submit" class="px-5 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors">
-        View
+        Filter
     </button>
 </form>
 
