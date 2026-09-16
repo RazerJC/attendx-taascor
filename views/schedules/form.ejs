@@ -1,0 +1,114 @@
+<%- include('../partials/layout-top') %>
+
+<div class="page-header">
+    <div>
+        <h2>Assign Work Schedules</h2>
+        <div class="breadcrumb">
+            <a href="/schedules">Schedules</a>
+            <span>/</span>
+            <span>New Schedule Batch</span>
+        </div>
+    </div>
+</div>
+
+<div style="max-width: 800px;">
+    <div class="card">
+        <div class="card-body">
+            <form action="/schedules" method="POST" id="scheduleForm">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+                <div class="form-group">
+                    <label>Select Employees <span class="required">*</span></label>
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                        <button type="button" class="btn btn-ghost btn-sm" onclick="toggleAllEmployees(true)">Select All</button>
+                        <button type="button" class="btn btn-ghost btn-sm" onclick="toggleAllEmployees(false)">Deselect All</button>
+                    </div>
+                    <div style="max-height: 180px; overflow-y: auto; border: 1px solid var(--color-gray-300); border-radius: 6px; padding: 10px; background: white;">
+                        <% if (employees.length === 0) { %>
+                            <p class="text-muted" style="padding: 8px;">No active employees available to schedule.</p>
+                        <% } else { %>
+                            <% employees.forEach(e => { %>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer;">
+                                    <input type="checkbox" name="employee_ids" value="<%= e.id %>" class="emp-checkbox">
+                                    <span><strong><%= e.full_name %></strong> (<%= e.employee_id %>)<% if (e.dept_name) { %> • <span class="badge" style="background: rgba(37, 99, 235, 0.08); color: var(--color-primary); font-size: 0.7rem;"><%= e.dept_name %></span><% } %></span>
+                                </label>
+                            <% }) %>
+                        <% } %>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="start_date">Start Date <span class="required">*</span></label>
+                        <input type="date" id="start_date" name="start_date" class="form-control" value="<%= defaultDate %>" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="end_date">End Date (Optional Range)</label>
+                        <input type="date" id="end_date" name="end_date" class="form-control" value="<%= defaultDate %>">
+                        <div class="form-help">Leave same as start date for a single day schedule.</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-check" style="cursor: pointer; margin-top: 8px;">
+                        <input type="checkbox" id="is_rest_day" name="is_rest_day" value="1" onchange="toggleRestDay(this.checked)">
+                        <strong>Mark as Rest Day (Day Off)</strong>
+                    </label>
+                </div>
+
+                <div id="shiftInputs" class="form-row">
+                    <div class="form-group">
+                        <label for="shift_start">Shift Start Time <span class="required">*</span></label>
+                        <input type="time" id="shift_start" name="shift_start" class="form-control" value="08:00">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="shift_end">Shift End Time <span class="required">*</span></label>
+                        <input type="time" id="shift_end" name="shift_end" class="form-control" value="17:00">
+                        <div class="form-help">For overnight shifts crossing midnight (e.g. 22:00 to 06:00), select respective hours.</div>
+                    </div>
+                </div>
+
+                <!-- Conflict Notification Box -->
+                <div id="conflictAlert" class="alert alert-warning hidden" style="margin-top: 16px;">
+                    <span class="alert-icon">⚠️</span>
+                    <div id="conflictMsg">Overlapping schedule detected.</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">Notes</label>
+                    <input type="text" id="notes" name="notes" class="form-control" placeholder="Optional notes (e.g. Peak season overtime)">
+                </div>
+
+                <div class="d-flex gap-1" style="margin-top: 24px;">
+                    <button type="submit" class="btn btn-primary btn-lg">Save Schedules</button>
+                    <a href="/schedules" class="btn btn-outline btn-lg">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleAllEmployees(select) {
+    document.querySelectorAll('.emp-checkbox').forEach(cb => cb.checked = select);
+}
+
+function toggleRestDay(isRest) {
+    const shiftInputs = document.getElementById('shiftInputs');
+    shiftInputs.style.opacity = isRest ? '0.4' : '1';
+    shiftInputs.style.pointerEvents = isRest ? 'none' : 'auto';
+    const startInput = document.getElementById('shift_start');
+    const endInput = document.getElementById('shift_end');
+    if (isRest) {
+        startInput.removeAttribute('required');
+        endInput.removeAttribute('required');
+    } else {
+        startInput.setAttribute('required', 'required');
+        endInput.setAttribute('required', 'required');
+    }
+}
+</script>
+
+<%- include('../partials/layout-bottom') %>

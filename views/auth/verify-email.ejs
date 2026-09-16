@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - TAASCOR</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="auth-page">
+    <div class="auth-card" style="text-align: center;">
+        <div class="auth-header">
+            <div class="auth-logo-badge">
+                <img src="/images/taascor-logo.png" alt="TAASCOR Logo">
+            </div>
+            <h1>Email Verification</h1>
+            <p>TAASCOR Management & General Services Corp.</p>
+        </div>
+
+        <div class="auth-body">
+            <div style="font-size: 3rem; margin-bottom: 12px;">✉️</div>
+            <h2>Check Your Inbox</h2>
+            <p style="font-size: 0.9rem; color: var(--color-gray-600); line-height: 1.6; margin-bottom: 20px;">
+                We sent a verification link to <strong><%= email %></strong>. Please click the link to verify ownership of your company email address.
+            </p>
+
+            <% if (typeof token !== 'undefined' && token) { %>
+                <!-- Development convenience link -->
+                <div style="background: #FEF3C7; border: 1px dashed #D97706; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 0.8rem; text-align: left;">
+                    <div style="font-weight: 700; color: #92400E; margin-bottom: 4px;">Development Mode Simulator:</div>
+                    <div style="color: #78350F; margin-bottom: 8px;">Since SMTP may not be configured locally, click below to verify directly:</div>
+                    <a href="/verify-email?token=<%= token %>" class="btn btn-warning btn-sm btn-block">Simulate Verification Click</a>
+                </div>
+            <% } %>
+
+            <a href="/login" class="btn btn-outline btn-block">Return to Sign In</a>
+        </div>
+    </div>
+</body>
+</html>

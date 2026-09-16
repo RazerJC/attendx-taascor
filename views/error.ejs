@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title || 'Error' %> - TAASCOR</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="auth-page">
+    <div class="auth-card" style="text-align: center; padding: 40px 30px;">
+        <div style="font-size: 3rem; color: var(--color-accent); font-weight: 800; margin-bottom: 12px;">
+            <%= code || '!' %>
+        </div>
+        <h2 style="margin-bottom: 12px; color: var(--color-primary);"><%= title || 'An Error Occurred' %></h2>
+        <p style="color: var(--color-gray-600); margin-bottom: 24px; font-size: 0.95rem;">
+            <%= message || 'The requested resource encountered an issue.' %>
+        </p>
+        <div>
+            <a href="/dashboard" class="btn btn-primary">Return to Dashboard</a>
+            <a href="javascript:history.back()" class="btn btn-outline" style="margin-left: 8px;">Go Back</a>
+        </div>
+    </div>
+</body>
+</html>

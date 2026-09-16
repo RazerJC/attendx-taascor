@@ -1,0 +1,102 @@
+<%- include('../partials/layout-top') %>
+
+<div class="page-header">
+    <div>
+        <h2>System Audit Logs</h2>
+        <div class="breadcrumb">
+            <a href="/dashboard">Dashboard</a>
+            <span>/</span>
+            <span>Security & Operational Audit Trail</span>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<form method="GET" action="/admin/audit-logs" class="filter-bar">
+    <div class="filter-group">
+        <label for="action">Action Keyword</label>
+        <input type="text" id="action" name="action" class="form-control" placeholder="e.g. LOGIN, ATTENDANCE" value="<%= filters.action %>">
+    </div>
+
+    <div class="filter-group">
+        <label for="entity_type">Entity Type</label>
+        <input type="text" id="entity_type" name="entity_type" class="form-control" placeholder="e.g. employees, users" value="<%= filters.entityType %>">
+    </div>
+
+    <div class="filter-group">
+        <label for="date_from">Date From</label>
+        <input type="date" id="date_from" name="date_from" class="form-control" value="<%= filters.dateFrom %>">
+    </div>
+
+    <div class="filter-group">
+        <label for="date_to">Date To</label>
+        <input type="date" id="date_to" name="date_to" class="form-control" value="<%= filters.dateTo %>">
+    </div>
+
+    <div style="display: flex; gap: 8px;">
+        <button type="submit" class="btn btn-outline">Filter</button>
+        <% if (filters.action || filters.entityType || filters.dateFrom || filters.dateTo) { %>
+            <a href="/admin/audit-logs" class="btn btn-ghost">Reset</a>
+        <% } %>
+    </div>
+</form>
+
+<!-- Logs Table -->
+<div class="card">
+    <div class="card-header">
+        <h3>Audit Events (<%= total %> Total Records)</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp (Asia/Manila)</th>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Action</th>
+                        <th>Target Entity</th>
+                        <th>IP Address</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (logs.length === 0) { %>
+                        <tr><td colspan="7" class="text-center" style="padding: 32px;">No audit records matching your criteria.</td></tr>
+                    <% } else { %>
+                        <% logs.forEach(log => { %>
+                            <tr>
+                                <td><%= formatDateTime(log.created_at) %></td>
+                                <td><strong><%= log.user_name || 'System' %></strong></td>
+                                <td><span class="badge badge-secondary"><%= log.user_role || 'SYS' %></span></td>
+                                <td><code style="color: var(--color-primary); font-weight: 600;"><%= log.action %></code></td>
+                                <td><%= log.entity_type || '—' %> #<%= log.entity_id || '—' %></td>
+                                <td><span class="text-muted"><%= log.ip_address || '—' %></span></td>
+                                <td style="font-size: 0.78rem; max-width: 300px; word-break: break-all;">
+                                    <code><%= log.details || '—' %></code>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+<% if (totalPages > 1) { %>
+    <div class="pagination">
+        <% if (page > 1) { %>
+            <a href="/admin/audit-logs?page=<%= page - 1 %>&action=<%= encodeURIComponent(filters.action) %>&entity_type=<%= encodeURIComponent(filters.entityType) %>&date_from=<%= filters.dateFrom %>&date_to=<%= filters.dateTo %>">« Previous</a>
+        <% } %>
+
+        <span class="active">Page <%= page %> of <%= totalPages %></span>
+
+        <% if (page < totalPages) { %>
+            <a href="/admin/audit-logs?page=<%= page + 1 %>&action=<%= encodeURIComponent(filters.action) %>&entity_type=<%= encodeURIComponent(filters.entityType) %>&date_from=<%= filters.dateFrom %>&date_to=<%= filters.dateTo %>">Next »</a>
+        <% } %>
+    </div>
+<% } %>
+
+<%- include('../partials/layout-bottom') %>

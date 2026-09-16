@@ -1,0 +1,113 @@
+<%- include('../partials/layout-top') %>
+
+<div class="page-header">
+    <div>
+        <h2>Requests & Concerns Hub</h2>
+        <div class="breadcrumb">
+            <span>Warehouse Manpower Requests & Deployment Tracking</span>
+        </div>
+    </div>
+    <div>
+        <a href="/manpower/new" class="btn btn-primary">🤝 New Manpower Request</a>
+    </div>
+</div>
+
+<!-- Three Hub Tabs -->
+<div class="tabs">
+    <a href="/btw" class="tab">
+        🏥 Back-to-Work Clearances
+    </a>
+    <a href="/concerns" class="tab">
+        💬 Employee Concerns
+    </a>
+    <a href="/manpower" class="tab active">
+        🤝 Manpower Requests
+        <span class="tab-count"><%= requests.length %></span>
+    </a>
+</div>
+
+<!-- Filter Bar -->
+<form method="GET" action="/manpower" class="filter-bar">
+    <div class="filter-group">
+        <label for="status">Status</label>
+        <select id="status" name="status" class="form-control" onchange="this.form.submit()">
+            <option value="">All Statuses</option>
+            <option value="submitted" <%= statusFilter === 'submitted' ? 'selected' : '' %>>Submitted</option>
+            <option value="under_review" <%= statusFilter === 'under_review' ? 'selected' : '' %>>Under Review</option>
+            <option value="partially_filled" <%= statusFilter === 'partially_filled' ? 'selected' : '' %>>Partially Filled</option>
+            <option value="filled" <%= statusFilter === 'filled' ? 'selected' : '' %>>Filled</option>
+            <option value="declined" <%= statusFilter === 'declined' ? 'selected' : '' %>>Declined</option>
+        </select>
+    </div>
+
+    <% if (areas.length > 0) { %>
+        <div class="filter-group">
+            <label for="area_id">Warehouse</label>
+            <select id="area_id" name="area_id" class="form-control" onchange="this.form.submit()">
+                <option value="">All Warehouses</option>
+                <% areas.forEach(a => { %>
+                    <option value="<%= a.id %>" <%= selectedAreaId === a.id ? 'selected' : '' %>><%= a.name %></option>
+                <% }) %>
+            </select>
+        </div>
+    <% } %>
+
+    <div style="display: flex; gap: 8px;">
+        <button type="submit" class="btn btn-outline">Filter</button>
+        <% if (statusFilter || (areas.length > 0 && selectedAreaId)) { %>
+            <a href="/manpower" class="btn btn-ghost">Reset</a>
+        <% } %>
+    </div>
+</form>
+
+<!-- Request List -->
+<div class="card">
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Request #</th>
+                        <th>Warehouse</th>
+                        <th>Deployment Date</th>
+                        <th>Requested</th>
+                        <th>Proposed</th>
+                        <th>Confirmed</th>
+                        <th>Status</th>
+                        <th class="text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (requests.length === 0) { %>
+                        <tr>
+                            <td colspan="8">
+                                <div class="empty-state">
+                                    <div class="empty-icon">🤝</div>
+                                    <h3>No manpower requests found</h3>
+                                    <p>Coordinators can submit requests for additional workers per position and deployment shift.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    <% } else { %>
+                        <% requests.forEach(r => { %>
+                            <tr>
+                                <td><strong>#<%= r.id %></strong></td>
+                                <td><%= r.area_name %></td>
+                                <td><strong><%= formatDate(r.deployment_date) %></strong></td>
+                                <td><span class="badge badge-secondary"><%= r.total_requested %> workers</span></td>
+                                <td><span class="badge badge-warning"><%= r.proposed_count %> proposed</span></td>
+                                <td><span class="badge badge-success"><%= r.confirmed_count %> confirmed</span></td>
+                                <td><%- include('../partials/status-badge', { status: r.status }) %></td>
+                                <td class="text-right">
+                                    <a href="/manpower/<%= r.id %>" class="btn btn-sm btn-primary">View Details</a>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/layout-bottom') %>

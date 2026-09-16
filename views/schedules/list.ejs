@@ -1,0 +1,112 @@
+<%- include('../partials/layout-top') %>
+
+<div class="page-header">
+    <div>
+        <h2>Employee Work Schedules</h2>
+        <div class="breadcrumb">
+            <span>Weekly Schedule Matrix</span>
+        </div>
+    </div>
+    <div>
+        <a href="/schedules/new" class="btn btn-primary">📅 Assign Schedules</a>
+    </div>
+</div>
+
+<!-- Week Navigation & Area Filter -->
+<div class="filter-bar" style="justify-content: space-between;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <% 
+            const curDt = DateTime.fromISO(targetDate, { zone: 'Asia/Manila' });
+            const prevWeek = curDt.minus({ weeks: 1 }).toFormat('yyyy-MM-dd');
+            const nextWeek = curDt.plus({ weeks: 1 }).toFormat('yyyy-MM-dd');
+            const todayStr = DateTime.now().setZone('Asia/Manila').toFormat('yyyy-MM-dd');
+        %>
+        <a href="/schedules?date=<%= prevWeek %><%= selectedAreaId ? '&area_id=' + selectedAreaId : '' %>" class="btn btn-outline btn-sm">◀ Prev Week</a>
+        <a href="/schedules?date=<%= todayStr %><%= selectedAreaId ? '&area_id=' + selectedAreaId : '' %>" class="btn btn-outline btn-sm">Current Week</a>
+        <a href="/schedules?date=<%= nextWeek %><%= selectedAreaId ? '&area_id=' + selectedAreaId : '' %>" class="btn btn-outline btn-sm">Next Week ▶</a>
+        <span style="font-weight: 600; font-size: 0.9rem; margin-left: 8px;">
+            <%= formatDate(weekDates[0]) %> – <%= formatDate(weekDates[6]) %>
+        </span>
+    </div>
+
+    <form method="GET" action="/schedules" style="display: flex; gap: 8px; flex-wrap: wrap;">
+        <input type="hidden" name="date" value="<%= targetDate %>">
+        <% if (areas.length > 0) { %>
+            <select name="area_id" class="form-control" onchange="this.form.submit()" style="min-width: 160px;">
+                <option value="">All Warehouses</option>
+                <% areas.forEach(a => { %>
+                    <option value="<%= a.id %>" <%= selectedAreaId === a.id ? 'selected' : '' %>><%= a.name %></option>
+                <% }) %>
+            </select>
+        <% } %>
+        <% if (typeof departments !== 'undefined' && departments.length > 0) { %>
+            <select name="department_id" class="form-control" onchange="this.form.submit()" style="min-width: 160px;">
+                <option value="">All Departments</option>
+                <% departments.forEach(d => { %>
+                    <option value="<%= d.id %>" <%= (typeof departmentId !== 'undefined' && departmentId === d.id) ? 'selected' : '' %>><%= d.name %></option>
+                <% }) %>
+            </select>
+        <% } %>
+    </form>
+</div>
+
+<!-- Schedule Table -->
+<div class="card">
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th style="min-width: 180px;">Employee</th>
+                        <% weekDates.forEach(d => { 
+                            const dayName = DateTime.fromISO(d, { zone: 'Asia/Manila' }).toFormat('ccc dd');
+                            const isToday = d === todayStr;
+                        %>
+                            <th class="text-center" style="<%= isToday ? 'background: #EEF2FF; color: var(--color-primary); font-weight: 700;' : '' %>">
+                                <%= dayName %>
+                            </th>
+                        <% }) %>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (employees.length === 0) { %>
+                        <tr>
+                            <td colspan="8" class="text-center" style="padding: 32px;">No active employees found in this view.</td>
+                        </tr>
+                    <% } else { %>
+                        <% employees.forEach(e => { %>
+                            <tr>
+                                <td>
+                                    <strong><%= e.full_name %></strong><br>
+                                    <span class="text-muted text-xs">
+                                        <%= e.position_title || 'Worker' %>
+                                        <% if (e.dept_name) { %> • <strong style="color: var(--color-primary);"><%= e.dept_name %></strong><% } %>
+                                        • <%= e.area_name %>
+                                    </span>
+                                </td>
+                                <% weekDates.forEach(d => { 
+                                    const sched = (scheduleMap[e.id] && scheduleMap[e.id][d]) ? scheduleMap[e.id][d] : null;
+                                    const isToday = d === todayStr;
+                                %>
+                                    <td class="text-center" style="<%= isToday ? 'background: rgba(37,99,235,0.03);' : '' %>">
+                                        <% if (!sched) { %>
+                                            <span class="text-muted text-xs">—</span>
+                                        <% } else if (sched.is_rest_day) { %>
+                                            <span class="badge badge-secondary" style="font-size: 0.7rem;">REST</span>
+                                        <% } else { %>
+                                            <div style="font-size: 0.78rem; font-weight: 600; color: var(--color-primary-dark);">
+                                                <%= sched.shift_start %> - <%= sched.shift_end %>
+                                            </div>
+                                        <% } %>
+                                    </td>
+                                <% }) %>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/layout-bottom') %>

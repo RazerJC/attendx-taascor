@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= typeof title !== 'undefined' ? title : 'TAASCOR Attendance Monitoring System' %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <meta name="csrf-token" content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+</head>
+<body>
+    <div class="app-layout">
+        <%- include('sidebar') %>
+        <div class="main-content">
+            <%- include('header') %>
+            
+            <main class="page-content">
+                <!-- Flash Messages -->
+                <% if (typeof flash !== 'undefined') { %>
+                    <% if (flash.success) { %>
+                        <div class="alert alert-success">
+                            <span class="alert-icon">✓</span>
+                            <div><%= flash.success %></div>
+                            <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+                        </div>
+                    <% } %>
+                    <% if (flash.error) { %>
+                        <div class="alert alert-error">
+                            <span class="alert-icon">⚠️</span>
+                            <div><%= flash.error %></div>
+                            <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+                        </div>
+                    <% } %>
+                    <% if (flash.warning) { %>
+                        <div class="alert alert-warning">
+                            <span class="alert-icon">⚠️</span>
+                            <div><%= flash.warning %></div>
+                            <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+                        </div>
+                    <% } %>
+                    <% if (flash.info) { %>
+                        <div class="alert alert-info">
+                            <span class="alert-icon">ℹ️</span>
+                            <div><%= flash.info %></div>
+                            <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+                        </div>
+                    <% } %>
+                <% } %>

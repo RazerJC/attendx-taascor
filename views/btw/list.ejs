@@ -1,0 +1,112 @@
+<%- include('../partials/layout-top') %>
+
+<div class="page-header">
+    <div>
+        <h2>Requests & Concerns Hub</h2>
+        <div class="breadcrumb">
+            <span>Unified operational threads and clearance workflows</span>
+        </div>
+    </div>
+</div>
+
+<!-- Three Hub Tabs -->
+<div class="tabs">
+    <a href="/btw" class="tab active">
+        🏥 Back-to-Work Clearances
+        <span class="tab-count"><%= cases.length %></span>
+    </a>
+    <a href="/concerns" class="tab">
+        💬 Employee Concerns
+    </a>
+    <a href="/manpower" class="tab">
+        🤝 Manpower Requests
+    </a>
+</div>
+
+<!-- Filter Bar -->
+<form method="GET" action="/btw" class="filter-bar">
+    <div class="filter-group">
+        <label for="status">Status</label>
+        <select id="status" name="status" class="form-control" onchange="this.form.submit()">
+            <option value="">All Statuses</option>
+            <option value="pending_hr_review" <%= statusFilter === 'pending_hr_review' ? 'selected' : '' %>>Pending HR Review</option>
+            <option value="for_clarification" <%= statusFilter === 'for_clarification' ? 'selected' : '' %>>For Clarification</option>
+            <option value="approved" <%= statusFilter === 'approved' ? 'selected' : '' %>>Approved</option>
+            <option value="not_approved" <%= statusFilter === 'not_approved' ? 'selected' : '' %>>Not Approved</option>
+        </select>
+    </div>
+
+    <% if (areas.length > 0) { %>
+        <div class="filter-group">
+            <label for="area_id">Warehouse</label>
+            <select id="area_id" name="area_id" class="form-control" onchange="this.form.submit()">
+                <option value="">All Warehouses</option>
+                <% areas.forEach(a => { %>
+                    <option value="<%= a.id %>" <%= selectedAreaId === a.id ? 'selected' : '' %>><%= a.name %></option>
+                <% }) %>
+            </select>
+        </div>
+    <% } %>
+
+    <div style="display: flex; gap: 8px;">
+        <button type="submit" class="btn btn-outline">Filter</button>
+        <% if (statusFilter || (areas.length > 0 && selectedAreaId)) { %>
+            <a href="/btw" class="btn btn-ghost">Reset</a>
+        <% } %>
+    </div>
+</form>
+
+<!-- Thread List -->
+<div class="card">
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Case Reference</th>
+                        <th>Employee</th>
+                        <th>Assigned Warehouse</th>
+                        <th>Assigned Coordinator</th>
+                        <th>Absence Reason</th>
+                        <th>Status</th>
+                        <th>Date Created</th>
+                        <th class="text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (cases.length === 0) { %>
+                        <tr>
+                            <td colspan="8">
+                                <div class="empty-state">
+                                    <div class="empty-icon">🏥</div>
+                                    <h3>No Back-to-Work cases</h3>
+                                    <p>Absences confirmed by coordinators will automatically create clearance threads here.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    <% } else { %>
+                        <% cases.forEach(c => { %>
+                            <tr>
+                                <td><strong><%= c.case_ref %></strong></td>
+                                <td>
+                                    <strong><%= c.employee_name %></strong><br>
+                                    <span class="text-muted text-xs"><%= c.emp_code %></span>
+                                </td>
+                                <td><%= c.area_name %></td>
+                                <td><%= c.coordinator_name || 'Coordinator' %></td>
+                                <td><%= c.absence_reason || 'Absence' %></td>
+                                <td><%- include('../partials/status-badge', { status: c.status }) %></td>
+                                <td><%= formatDate(c.created_at) %></td>
+                                <td class="text-right">
+                                    <a href="/btw/<%= c.id %>" class="btn btn-sm btn-primary">View Details</a>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/layout-bottom') %>

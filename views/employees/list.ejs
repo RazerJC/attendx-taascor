@@ -1,0 +1,152 @@
+<%- include('../partials/layout-top') %>
+
+<div class="page-header">
+    <div>
+        <h2>Employee Masterfile</h2>
+        <div class="breadcrumb">
+            <span>Manage employee profiles across operational warehouses</span>
+        </div>
+    </div>
+    <div>
+        <a href="/employees/new" class="btn btn-primary">➕ Add Employee</a>
+    </div>
+</div>
+
+<!-- Tabs: Active vs Inactive -->
+<div class="tabs">
+    <a href="/employees?tab=active<%= selectedAreaId ? '&area_id=' + selectedAreaId : '' %><%= positionId ? '&position_id=' + positionId : '' %><%= search ? '&search=' + encodeURIComponent(search) : '' %>" 
+       class="tab <%= tab === 'active' ? 'active' : '' %>">
+        Active Employees
+        <span class="tab-count"><%= activeCount %></span>
+    </a>
+    <a href="/employees?tab=inactive<%= selectedAreaId ? '&area_id=' + selectedAreaId : '' %><%= positionId ? '&position_id=' + positionId : '' %><%= search ? '&search=' + encodeURIComponent(search) : '' %>" 
+       class="tab <%= tab === 'inactive' ? 'active' : '' %>">
+        Inactive Employees
+        <span class="tab-count"><%= inactiveCount %></span>
+    </a>
+</div>
+
+<!-- Filter Bar -->
+<form method="GET" action="/employees" class="filter-bar">
+    <input type="hidden" name="tab" value="<%= tab %>">
+
+    <div class="filter-group" style="flex: 1; min-width: 200px;">
+        <label for="search">Search</label>
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search" name="search" class="form-control" placeholder="Search by name or Employee ID..." value="<%= search %>">
+        </div>
+    </div>
+
+    <% if (areas.length > 0) { %>
+        <div class="filter-group">
+            <label for="area_id">Warehouse / Area</label>
+            <select id="area_id" name="area_id" class="form-control">
+                <option value="">All Warehouses</option>
+                <% areas.forEach(a => { %>
+                    <option value="<%= a.id %>" <%= selectedAreaId === a.id ? 'selected' : '' %>><%= a.name %></option>
+                <% }) %>
+            </select>
+        </div>
+    <% } %>
+
+    <div class="filter-group">
+        <label for="position_id">Position</label>
+        <select id="position_id" name="position_id" class="form-control">
+            <option value="">All Positions</option>
+            <% positions.forEach(p => { %>
+                <option value="<%= p.id %>" <%= positionId === p.id ? 'selected' : '' %>><%= p.title %></option>
+            <% }) %>
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <label for="department_id">Department</label>
+        <select id="department_id" name="department_id" class="form-control">
+            <option value="">All Departments</option>
+            <% (departments || []).forEach(d => { %>
+                <option value="<%= d.id %>" <%= departmentId === d.id ? 'selected' : '' %>><%= d.name %></option>
+            <% }) %>
+        </select>
+    </div>
+
+    <div style="display: flex; gap: 8px;">
+        <button type="submit" class="btn btn-outline">Filter</button>
+        <% if (search || selectedAreaId || positionId || departmentId) { %>
+            <a href="/employees?tab=<%= tab %>" class="btn btn-ghost">Reset</a>
+        <% } %>
+    </div>
+</form>
+
+<!-- Employees Table -->
+<div class="card">
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Employee ID</th>
+                        <th>Full Name</th>
+                        <th>Department</th>
+                        <th>Warehouse</th>
+                        <th>Position</th>
+                        <th>Start Date</th>
+                        <th>Clearance Status</th>
+                        <th class="text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (employees.length === 0) { %>
+                        <tr>
+                            <td colspan="8">
+                                <div class="empty-state">
+                                    <div class="empty-icon">👥</div>
+                                    <h3>No <%= tab %> employees found</h3>
+                                    <p>Try clearing your search filters or add a new employee record.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    <% } else { %>
+                        <% employees.forEach(e => { %>
+                            <tr>
+                                <td><strong><%= e.employee_id %></strong></td>
+                                <td>
+                                    <a href="/employees/<%= e.id %>" style="font-weight: 600;">
+                                        <%= e.full_name %>
+                                    </a>
+                                </td>
+                                <td>
+                                    <% if (e.dept_name) { %>
+                                        <span class="badge" style="background: rgba(37, 99, 235, 0.1); color: var(--color-primary); border: 1px solid rgba(37, 99, 235, 0.2); font-weight: 600;">
+                                            🏢 <%= e.dept_name %>
+                                        </span>
+                                    <% } else { %>
+                                        <span class="badge" style="background: rgba(245, 158, 11, 0.1); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.2);">
+                                            Unassigned
+                                        </span>
+                                    <% } %>
+                                </td>
+                                <td><%= e.area_name %></td>
+                                <td><%= e.position_title || '<span class="text-muted">—</span>' %></td>
+                                <td><%= formatDate(e.employment_start_date) %></td>
+                                <td>
+                                    <% if (e.open_btw_status) { %>
+                                        <span class="badge badge-warning">🏥 Clearance Pending</span>
+                                    <% } else { %>
+                                        <span class="badge badge-success">✓ Cleared</span>
+                                    <% } %>
+                                </td>
+                                <td class="text-right">
+                                    <a href="/employees/<%= e.id %>" class="btn btn-sm btn-outline">View</a>
+                                    <a href="/employees/<%= e.id %>/edit" class="btn btn-sm btn-ghost">Edit</a>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/layout-bottom') %>
