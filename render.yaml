@@ -1,39 +1,15 @@
-# render.yaml — Render.com Blueprint for AttendX For TAASCOR
-# PHP 8.2 + Apache + Embedded MariaDB (all-in-one Docker container)
-
+# render.yaml — Render.com Blueprint for TAASCOR Attendance Monitoring System
 services:
-  # ── Main Web Service ──────────────────────────────────────────
   - type: web
     name: attendx-taascor
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile
-    healthCheckPath: /ATTENDANCE/health.php
+    healthCheckPath: /health
     envVars:
-      - key: SMTP_HOST
-        value: smtp.hostinger.com
-      - key: SMTP_PORT
-        value: "465"
-      - key: SMTP_USER
-        value: noreply@taascor.com
-      - key: SMTP_PASS
-        sync: false          # Set this secret in the Render Dashboard
-      - key: SITE_URL
-        value: https://attendx-taascor.onrender.com/ATTENDANCE
-      - key: DB_HOST
-        value: "127.0.0.1"
-      - key: DB_NAME
-        value: taascor_attendance
-      - key: DB_USER
-        value: root
-      - key: DB_PASS
-        value: ""
-
-  # ── Keep-Alive Cron (prevents free-tier sleep) ───────────────
-  - type: cron
-    name: attendx-keepalive
-    runtime: image
-    image:
-      url: curlimages/curl:8.11.1
-    schedule: "*/14 * * * *"
-    startCommand: "curl -sf https://attendx-taascor.onrender.com/ATTENDANCE/health.php || true"
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: SESSION_SECRET
+        generateValue: true

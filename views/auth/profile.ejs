@@ -1,0 +1,597 @@
+<%- include('../partials/layout-top') %>
+
+<div class="fb-profile-wrapper">
+    <!-- Facebook-Style Cover Photo Banner -->
+    <div class="fb-cover-banner">
+        <div class="fb-cover-overlay"></div>
+        <div class="fb-cover-badges">
+            <span class="role-badge <%= profile.role.toLowerCase() %>">
+                <%= profile.role === 'COORDINATOR' ? '🎯 Operational Coordinator' : (profile.role === 'ADMIN' ? '👑 System Administrator' : '👔 HR Officer') %>
+            </span>
+            <% if (areaAssignment) { %>
+                <span class="area-badge">
+                    🏢 Assigned: <strong><%= areaAssignment.name %></strong>
+                </span>
+            <% } %>
+        </div>
+    </div>
+
+    <!-- Profile Header Info Bar (FB-Style Overlapping Avatar) -->
+    <div class="fb-header-bar">
+        <div class="fb-header-left">
+            <!-- Circular Avatar with Camera Trigger -->
+            <div class="fb-avatar-wrap">
+                <div class="fb-avatar-circle" id="avatarPreviewContainer">
+                    <% if (profile.profile_photo) { %>
+                        <img src="<%= profile.profile_photo %>" alt="<%= profile.full_name %>" id="avatarImagePreview" class="fb-avatar-img">
+                    <% } else { %>
+                        <div class="fb-avatar-fallback" id="avatarFallback">
+                            <%= profile.full_name ? profile.full_name.charAt(0).toUpperCase() : 'U' %>
+                        </div>
+                        <img src="" alt="" id="avatarImagePreview" class="fb-avatar-img" style="display: none;">
+                    <% } %>
+                </div>
+                <label for="avatarFileInput" class="fb-avatar-cam-btn" title="Change Profile Picture">
+                    📷
+                </label>
+                <input type="file" id="avatarFileInput" accept="image/png, image/jpeg, image/webp, image/gif" style="display: none;" onchange="handleAvatarFileSelect(event)">
+            </div>
+
+            <!-- Name and Subtext -->
+            <div class="fb-name-meta">
+                <div class="fb-full-name">
+                    <%= profile.full_name %>
+                    <span class="fb-verified-check" title="Active Verified Account">✓</span>
+                </div>
+                <div class="fb-subtitle-text">
+                    <span><%= profile.email %></span>
+                    <% if (areaAssignment) { %>
+                        <span>•</span>
+                        <span><%= areaAssignment.name %> Station</span>
+                    <% } %>
+                    <span>•</span>
+                    <span>Joined <%= formatDate(profile.created_at) %></span>
+                </div>
+                <% if (profile.bio) { %>
+                    <div class="fb-short-bio">"<%= profile.bio %>"</div>
+                <% } %>
+            </div>
+        </div>
+
+        <!-- Right Header Action: Change Password Link -->
+        <div class="fb-header-right">
+            <a href="/change-password" class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+                <span>🔑</span> Change Password
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Profile Content Grid -->
+    <div class="fb-content-grid">
+        
+        <!-- Left Column: About & Operational Stats -->
+        <div class="fb-col-left">
+            <!-- About Card -->
+            <div class="card p-3 mb-3" style="border-radius: 10px; border: 1px solid #e2e8f0; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                <h3 style="font-size: 0.95rem; font-weight: 800; color: #0f172a; margin: 0 0 12px 0; display: flex; align-items: center; gap: 6px;">
+                    <span>📌</span> Overview & Details
+                </h3>
+
+                <div class="fb-info-list">
+                    <div class="fb-info-item">
+                        <div class="fb-info-icon">🏢</div>
+                        <div>
+                            <div class="fb-info-label">Assigned Warehouse / Station</div>
+                            <div class="fb-info-val"><%= areaAssignment ? areaAssignment.name : 'All Areas / Unrestricted' %></div>
+                            <% if (areaAssignment && areaAssignment.description) { %>
+                                <div class="text-muted" style="font-size: 0.72rem;"><%= areaAssignment.description %></div>
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <div class="fb-info-item">
+                        <div class="fb-info-icon">📧</div>
+                        <div>
+                            <div class="fb-info-label">Company Email</div>
+                            <div class="fb-info-val"><%= profile.email %></div>
+                        </div>
+                    </div>
+
+                    <div class="fb-info-item">
+                        <div class="fb-info-icon">📱</div>
+                        <div>
+                            <div class="fb-info-label">Contact / Phone</div>
+                            <div class="fb-info-val"><%= profile.phone ? profile.phone : 'Not yet provided' %></div>
+                        </div>
+                    </div>
+
+                    <div class="fb-info-item">
+                        <div class="fb-info-icon">🛡️</div>
+                        <div>
+                            <div class="fb-info-label">Account Role</div>
+                            <div class="fb-info-val"><%= profile.role %> (<%= profile.status.toUpperCase() %>)</div>
+                        </div>
+                    </div>
+
+                    <div class="fb-info-item">
+                        <div class="fb-info-icon">🕒</div>
+                        <div>
+                            <div class="fb-info-label">Last Login</div>
+                            <div class="fb-info-val"><%= profile.last_login_at ? formatDateTime(profile.last_login_at) : 'First Session' %></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Stats Card -->
+            <div class="card p-3 mb-3" style="border-radius: 10px; border: 1px solid #e2e8f0; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                <h3 style="font-size: 0.95rem; font-weight: 800; color: #0f172a; margin: 0 0 12px 0; display: flex; align-items: center; gap: 6px;">
+                    <span>📊</span> Operational Activity
+                </h3>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="fb-stat-box">
+                        <div class="fb-stat-num"><%= stats.totalAttendances %></div>
+                        <div class="fb-stat-lbl">Attendances Marked</div>
+                    </div>
+                    <div class="fb-stat-box">
+                        <div class="fb-stat-num"><%= stats.totalEmployees %></div>
+                        <div class="fb-stat-lbl">Active Staff in Area</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Edit Profile Form -->
+        <div class="fb-col-right">
+            <div class="card p-4" style="border-radius: 10px; border: 1px solid #e2e8f0; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 16px;">
+                    <div>
+                        <h2 style="font-size: 1.1rem; font-weight: 800; color: #0f172a; margin: 0;">✏️ Edit Profile Details</h2>
+                        <div class="text-muted" style="font-size: 0.76rem; margin-top: 2px;">
+                            Update your profile picture, personal details, and contact information.
+                        </div>
+                    </div>
+                </div>
+
+                <form method="POST" action="/profile" id="profileEditForm">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input type="hidden" name="profile_photo_data" id="profilePhotoDataInput" value="">
+                    <input type="hidden" name="remove_photo" id="removePhotoInput" value="0">
+
+                    <!-- Photo Upload Section (FB Style) -->
+                    <div class="profile-photo-edit-strip mb-4">
+                        <div class="edit-avatar-preview">
+                            <div class="preview-circle" id="formPreviewCircle">
+                                <% if (profile.profile_photo) { %>
+                                    <img src="<%= profile.profile_photo %>" alt="" id="formAvatarImg" class="preview-img">
+                                <% } else { %>
+                                    <div class="preview-fallback" id="formAvatarFallback">
+                                        <%= profile.full_name ? profile.full_name.charAt(0).toUpperCase() : 'U' %>
+                                    </div>
+                                    <img src="" alt="" id="formAvatarImg" class="preview-img" style="display: none;">
+                                <% } %>
+                            </div>
+                        </div>
+
+                        <div class="edit-avatar-actions">
+                            <strong style="font-size: 0.85rem; color: #0f172a; display: block; margin-bottom: 4px;">Profile Photo</strong>
+                            <div class="text-muted" style="font-size: 0.74rem; margin-bottom: 8px;">
+                                Tap to choose a new photo from your computer or phone (JPEG, PNG, WEBP, max 10MB).
+                            </div>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('avatarFileInput').click()">
+                                    📷 Upload Photo
+                                </button>
+                                <% if (profile.profile_photo) { %>
+                                    <button type="button" class="btn btn-ghost btn-sm text-danger" onclick="triggerRemovePhoto()">
+                                        🗑️ Remove Photo
+                                    </button>
+                                <% } %>
+                            </div>
+                            <div id="photoStatusText" style="font-size: 0.72rem; color: #16a34a; font-weight: 700; margin-top: 6px; display: none;">
+                                ✓ New photo ready! Click "Save Changes" below to apply.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Full Name -->
+                    <div class="form-group mb-3">
+                        <label for="full_name" style="font-weight: 700; font-size: 0.8rem; color: #334155;">
+                            Full Name <span class="required">*</span>
+                        </label>
+                        <input type="text" id="full_name" name="full_name" class="form-control" value="<%= profile.full_name %>" required style="font-size: 0.85rem; padding: 8px 12px; border-radius: 6px;">
+                    </div>
+
+                    <!-- Email (Read-Only) -->
+                    <div class="form-group mb-3">
+                        <label for="email_display" style="font-weight: 700; font-size: 0.8rem; color: #334155;">
+                            Official Email <span class="text-muted" style="font-weight: normal; font-size: 0.74rem;">(Managed by Administrator)</span>
+                        </label>
+                        <input type="email" id="email_display" class="form-control" value="<%= profile.email %>" readonly disabled style="background: #f8fafc; font-size: 0.85rem; padding: 8px 12px; border-radius: 6px; color: #64748b;">
+                    </div>
+
+                    <!-- Phone Number -->
+                    <div class="form-group mb-3">
+                        <label for="phone" style="font-weight: 700; font-size: 0.8rem; color: #334155;">
+                            Contact / Mobile Number
+                        </label>
+                        <input type="text" id="phone" name="phone" class="form-control" value="<%= profile.phone || '' %>" placeholder="e.g. 0917-123-4567" style="font-size: 0.85rem; padding: 8px 12px; border-radius: 6px;">
+                    </div>
+
+                    <!-- Bio / Operations Note -->
+                    <div class="form-group mb-4">
+                        <label for="bio" style="font-weight: 700; font-size: 0.8rem; color: #334155;">
+                            Bio / Designation Notes
+                        </label>
+                        <textarea id="bio" name="bio" class="form-control" rows="3" placeholder="Brief note about your role, shift schedule, or station responsibilities..." style="font-size: 0.85rem; padding: 8px 12px; border-radius: 6px;"><%= profile.bio || '' %></textarea>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div style="display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #f1f5f9; padding-top: 16px;">
+                        <a href="/dashboard" class="btn btn-outline btn-sm">Cancel</a>
+                        <button type="submit" class="btn btn-primary btn-sm" style="padding: 8px 24px; font-weight: 800; font-size: 0.84rem; box-shadow: 0 2px 6px rgba(37,99,235,0.25);">
+                            💾 Save Profile Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<style>
+/* ============================================================ */
+/* FACEBOOK-STYLE PROFILE STYLING (CLEAN & MODERN ENTERPRISE)   */
+/* ============================================================ */
+.fb-profile-wrapper {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding-bottom: 40px;
+}
+
+/* Cover Banner */
+.fb-cover-banner {
+    position: relative;
+    height: 180px;
+    background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 40%, #2563eb 70%, #38bdf8 100%);
+    border-radius: 12px 12px 0 0;
+    overflow: hidden;
+}
+.fb-cover-overlay {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top right, rgba(255,255,255,0.2), transparent 60%);
+}
+.fb-cover-badges {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.role-badge {
+    background: rgba(255, 255, 255, 0.92);
+    color: #1e3a8a;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+.area-badge {
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(4px);
+    color: white;
+    font-size: 0.72rem;
+    padding: 3px 10px;
+    border-radius: 20px;
+}
+
+/* Header Bar with Overlapping Avatar */
+.fb-header-bar {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    padding: 0 24px 20px 24px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+
+.fb-header-left {
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+/* Avatar Wrap */
+.fb-avatar-wrap {
+    position: relative;
+    margin-top: -65px;
+    flex-shrink: 0;
+}
+.fb-avatar-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 4px solid white;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+    background: #e2e8f0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.fb-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.fb-avatar-fallback {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: white;
+    font-size: 3rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+}
+.fb-avatar-cam-btn {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #0f172a;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+.fb-avatar-cam-btn:hover {
+    transform: scale(1.1);
+    background: #2563eb;
+}
+
+/* Name Meta */
+.fb-name-meta {
+    padding-bottom: 4px;
+}
+.fb-full-name {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.fb-verified-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #22c55e;
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 900;
+}
+.fb-subtitle-text {
+    font-size: 0.78rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+}
+.fb-short-bio {
+    font-size: 0.8rem;
+    color: #334155;
+    font-style: italic;
+    margin-top: 4px;
+}
+
+/* Grid Layout */
+.fb-content-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 20px;
+}
+@media (max-width: 860px) {
+    .fb-content-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Info List */
+.fb-info-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.fb-info-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.78rem;
+}
+.fb-info-icon {
+    font-size: 1rem;
+    width: 24px;
+    text-align: center;
+    flex-shrink: 0;
+}
+.fb-info-label {
+    font-size: 0.68rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+}
+.fb-info-val {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+/* Stat Box */
+.fb-stat-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 8px;
+    text-align: center;
+}
+.fb-stat-num {
+    font-size: 1.3rem;
+    font-weight: 900;
+    color: #2563eb;
+    line-height: 1.1;
+}
+.fb-stat-lbl {
+    font-size: 0.68rem;
+    color: #64748b;
+    font-weight: 700;
+    margin-top: 4px;
+}
+
+/* Photo Edit Strip */
+.profile-photo-edit-strip {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 16px;
+}
+.preview-circle {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    border: 2px solid #cbd5e1;
+    overflow: hidden;
+    background: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.preview-fallback {
+    width: 100%;
+    height: 100%;
+    background: #2563eb;
+    color: white;
+    font-size: 1.8rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+</style>
+
+<script>
+// Handle local image file selection with immediate FileReader preview
+function handleAvatarFileSelect(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        alert('Please choose a valid image file (PNG, JPEG, WEBP).');
+        return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+        alert('Image file size must be under 10MB.');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const base64Data = e.target.result;
+
+        // Set hidden form input
+        document.getElementById('profilePhotoDataInput').value = base64Data;
+        document.getElementById('removePhotoInput').value = '0';
+
+        // Update header preview
+        const headerImg = document.getElementById('avatarImagePreview');
+        const headerFallback = document.getElementById('avatarFallback');
+        if (headerImg) {
+            headerImg.src = base64Data;
+            headerImg.style.display = 'block';
+        }
+        if (headerFallback) {
+            headerFallback.style.display = 'none';
+        }
+
+        // Update form strip preview
+        const formImg = document.getElementById('formAvatarImg');
+        const formFallback = document.getElementById('formAvatarFallback');
+        if (formImg) {
+            formImg.src = base64Data;
+            formImg.style.display = 'block';
+        }
+        if (formFallback) {
+            formFallback.style.display = 'none';
+        }
+
+        const statusText = document.getElementById('photoStatusText');
+        if (statusText) {
+            statusText.textContent = '✓ New photo ready! Click "Save Profile Changes" below to apply.';
+            statusText.style.color = '#16a34a';
+            statusText.style.display = 'block';
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+function triggerRemovePhoto() {
+    if (!confirm('Are you sure you want to remove your profile photo?')) return;
+
+    document.getElementById('profilePhotoDataInput').value = '';
+    document.getElementById('removePhotoInput').value = '1';
+
+    const headerImg = document.getElementById('avatarImagePreview');
+    const headerFallback = document.getElementById('avatarFallback');
+    if (headerImg) headerImg.style.display = 'none';
+    if (headerFallback) headerFallback.style.display = 'flex';
+
+    const formImg = document.getElementById('formAvatarImg');
+    const formFallback = document.getElementById('formAvatarFallback');
+    if (formImg) formImg.style.display = 'none';
+    if (formFallback) formFallback.style.display = 'flex';
+
+    const statusText = document.getElementById('photoStatusText');
+    if (statusText) {
+        statusText.textContent = 'Photo marked for removal. Click "Save Profile Changes" below to apply.';
+        statusText.style.color = '#ef4444';
+        statusText.style.display = 'block';
+    }
+}
+</script>
+
+<%- include('../partials/layout-bottom') %>

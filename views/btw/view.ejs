@@ -1,0 +1,186 @@
+<%- include('../partials/layout-top') %>
+
+<div class="page-header">
+    <div>
+        <h2><%= btwCase.case_ref %> — Back-to-Work Clearance</h2>
+        <div class="breadcrumb">
+            <a href="/btw">Requests & Concerns</a>
+            <span>/</span>
+            <span>Back-to-Work</span>
+            <span>/</span>
+            <span><%= btwCase.case_ref %></span>
+        </div>
+    </div>
+    <div>
+        <%- include('../partials/status-badge', { status: btwCase.status }) %>
+    </div>
+</div>
+
+<!-- Highlighted Official Decision Box (Prompt Requirement) -->
+<% if (btwCase.status === 'approved') { %>
+    <div class="decision-box">
+        <h4 style="color: var(--color-success);">✓ Official HR Clearance Decision: APPROVED</h4>
+        <p><strong>Authorized Return Date:</strong> <span style="font-size: 1.1rem; color: var(--color-success); font-weight: 700;"><%= formatDate(btwCase.authorized_return_date) %></span></p>
+        <p><strong>Reviewer:</strong> <%= btwCase.hr_reviewer_name || 'HR Department' %> • <strong>Decided:</strong> <%= formatDateTime(btwCase.decision_at) %></p>
+        <% if (btwCase.hr_remarks) { %>
+            <p><strong>Official Remarks:</strong> <%= btwCase.hr_remarks %></p>
+        <% } %>
+    </div>
+<% } else if (btwCase.status === 'not_approved') { %>
+    <div class="decision-box rejected">
+        <h4 style="color: var(--color-danger);">✕ Official HR Clearance Decision: NOT APPROVED</h4>
+        <p><strong>Reviewer:</strong> <%= btwCase.hr_reviewer_name || 'HR Department' %> • <strong>Decided:</strong> <%= formatDateTime(btwCase.decision_at) %></p>
+        <% if (btwCase.hr_remarks) { %>
+            <p><strong>Official Remarks:</strong> <%= btwCase.hr_remarks %></p>
+        <% } %>
+    </div>
+<% } else if (btwCase.status === 'for_clarification') { %>
+    <div class="alert alert-warning">
+        <span class="alert-icon">⚠️</span>
+        <div>
+            <strong>Clarification Requested by HR:</strong> Please review the HR comments in the thread below and provide additional explanation.
+        </div>
+    </div>
+<% } else { %>
+    <div class="alert alert-info">
+        <span class="alert-icon">ℹ️</span>
+        <div>
+            <strong>Pending HR Review:</strong> This clearance case is currently awaiting review and decision by the HR department.
+        </div>
+    </div>
+<% } %>
+
+<!-- Case Summary Grid -->
+<div class="detail-grid card mb-3" style="padding: 20px;">
+    <div class="detail-item">
+        <div class="detail-label">Employee</div>
+        <div class="detail-value">
+            <a href="/employees/<%= btwCase.employee_id %>"><%= btwCase.employee_name %> (<%= btwCase.emp_code %>)</a>
+        </div>
+    </div>
+    <div class="detail-item">
+        <div class="detail-label">Position / Warehouse</div>
+        <div class="detail-value"><%= btwCase.position_title || 'Worker' %> • <%= btwCase.area_name %></div>
+    </div>
+    <div class="detail-item">
+        <div class="detail-label">Assigned Coordinator</div>
+        <div class="detail-value"><%= btwCase.coordinator_name || '—' %></div>
+    </div>
+    <div class="detail-item">
+        <div class="detail-label">Related Absence Date(s)</div>
+        <div class="detail-value">
+            <% dates.forEach(d => { %>
+                <span class="badge badge-danger" style="margin-right: 4px;"><%= formatDate(d) %></span>
+            <% }) %>
+        </div>
+    </div>
+    <div class="detail-item">
+        <div class="detail-label">Initial Absence Reason</div>
+        <div class="detail-value"><%= btwCase.absence_reason || 'Unexcused Absence' %></div>
+    </div>
+    <div class="detail-item">
+        <div class="detail-label">Case Created</div>
+        <div class="detail-value"><%= formatDateTime(btwCase.created_at) %></div>
+    </div>
+</div>
+
+<!-- Authorized Decision Actions for HR / ADMIN -->
+<% if (user.role === 'HR' || user.role === 'ADMIN') { %>
+    <div class="card mb-3" style="border: 2px solid var(--color-primary);">
+        <div class="card-header" style="background: rgba(27,42,74,0.05);">
+            <h3>⚖️ HR Clearance Decision</h3>
+            <span class="text-sm text-muted">Authorized for HR and Administrator roles only</span>
+        </div>
+        <div class="card-body">
+            <form action="/btw/<%= btwCase.id %>/decision" method="POST">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="decision">Clearance Decision <span class="required">*</span></label>
+                        <select id="decision" name="decision" class="form-control" onchange="toggleReturnDate(this.value)" required>
+                            <option value="">— Select Decision —</option>
+                            <option value="approved" <%= btwCase.status === 'approved' ? 'selected' : '' %>>Approve Clearance</option>
+                            <option value="for_clarification" <%= btwCase.status === 'for_clarification' ? 'selected' : '' %>>Request Clarification</option>
+                            <option value="not_approved" <%= btwCase.status === 'not_approved' ? 'selected' : '' %>>Do Not Approve</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="returnDateGroup">
+                        <label for="authorized_return_date">Authorized Return Date</label>
+                        <input type="date" id="authorized_return_date" name="authorized_return_date" class="form-control" 
+                               value="<%= btwCase.authorized_return_date || new Date().toISOString().split('T')[0] %>">
+                        <div class="form-help">Mandatory when clearance is approved.</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="hr_remarks">HR Remarks / Decision Justification</label>
+                    <textarea id="hr_remarks" name="hr_remarks" class="form-control" rows="2" placeholder="State clearance conditions, instructions, or findings..."><%= btwCase.hr_remarks || '' %></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    Record Official Decision
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    function toggleReturnDate(val) {
+        const group = document.getElementById('returnDateGroup');
+        const input = document.getElementById('authorized_return_date');
+        if (val === 'approved') {
+            group.style.display = 'block';
+            input.setAttribute('required', 'required');
+        } else {
+            input.removeAttribute('required');
+        }
+    }
+    toggleReturnDate(document.getElementById('decision').value);
+    </script>
+<% } %>
+
+<!-- Forum Thread Messages -->
+<div class="card mb-3">
+    <div class="card-header">
+        <h3>💬 Case Thread & Communication Timeline (<%= entries.length %>)</h3>
+    </div>
+    <div class="card-body">
+        <div class="thread">
+            <% entries.forEach(entry => { %>
+                <div class="thread-entry">
+                    <div class="thread-avatar <%= entry.author_role.toLowerCase() %>">
+                        <%= entry.author_name ? entry.author_name.charAt(0).toUpperCase() : 'S' %>
+                    </div>
+                    <div class="thread-content">
+                        <div class="thread-meta">
+                            <span class="thread-author"><%= entry.author_name || 'System' %></span>
+                            <span class="thread-role <%= entry.author_role.toLowerCase() %>"><%= entry.author_role %></span>
+                            <span class="thread-time">• <%= formatDateTime(entry.created_at) %></span>
+                        </div>
+                        <div class="thread-body <%= entry.entry_type === 'status_change' ? 'thread-status-change' : '' %>"><%= entry.content %></div>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+
+        <!-- Add Reply Form -->
+        <div style="border-top: 2px solid var(--color-gray-200); padding-top: 20px; margin-top: 20px;">
+            <h4 style="font-size: 0.95rem; margin-bottom: 12px; color: var(--color-primary);">Post Update or Follow-Up Remarks</h4>
+            <form action="/btw/<%= btwCase.id %>/reply" method="POST">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+                <div class="form-group">
+                    <textarea name="content" class="form-control" rows="3" placeholder="<%= user.role === 'COORDINATOR' ? 'Provide explanation, attach employee statements, or report follow-up...' : 'Add HR instructions, remarks, or notes...' %>" required></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-outline">
+                    Post Message
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/layout-bottom') %>

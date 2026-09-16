@@ -1,0 +1,112 @@
+<%- include('../partials/layout-top') %>
+
+<div class="page-header">
+    <div>
+        <h2>Reports & Analytics</h2>
+        <div class="breadcrumb">
+            <span>Filter and export attendance reports to CSV or Excel</span>
+        </div>
+    </div>
+    <div class="btn-group">
+        <a href="/reports/export?format=xlsx&date_from=<%= dateFrom %>&date_to=<%= dateTo %><%= selectedAreaId ? '&area_id=' + selectedAreaId : '' %><%= selectedStatus ? '&status=' + selectedStatus : '' %>" 
+           class="btn btn-success">
+            📊 Export to Excel (.xlsx)
+        </a>
+        <a href="/reports/export?format=csv&date_from=<%= dateFrom %>&date_to=<%= dateTo %><%= selectedAreaId ? '&area_id=' + selectedAreaId : '' %><%= selectedStatus ? '&status=' + selectedStatus : '' %>" 
+           class="btn btn-outline">
+            📄 Export to CSV
+        </a>
+    </div>
+</div>
+
+<!-- Filters -->
+<form method="GET" action="/reports" class="filter-bar">
+    <div class="filter-group">
+        <label for="date_from">Date From</label>
+        <input type="date" id="date_from" name="date_from" class="form-control" value="<%= dateFrom %>">
+    </div>
+
+    <div class="filter-group">
+        <label for="date_to">Date To</label>
+        <input type="date" id="date_to" name="date_to" class="form-control" value="<%= dateTo %>">
+    </div>
+
+    <% if (areas.length > 0) { %>
+        <div class="filter-group">
+            <label for="area_id">Warehouse / Area</label>
+            <select id="area_id" name="area_id" class="form-control">
+                <option value="">All Warehouses</option>
+                <% areas.forEach(a => { %>
+                    <option value="<%= a.id %>" <%= selectedAreaId === a.id ? 'selected' : '' %>><%= a.name %></option>
+                <% }) %>
+            </select>
+        </div>
+    <% } %>
+
+    <div class="filter-group">
+        <label for="status">Attendance Status</label>
+        <select id="status" name="status" class="form-control">
+            <option value="">All Statuses</option>
+            <option value="present" <%= selectedStatus === 'present' ? 'selected' : '' %>>Present</option>
+            <option value="late" <%= selectedStatus === 'late' ? 'selected' : '' %>>Late</option>
+            <option value="absent" <%= selectedStatus === 'absent' ? 'selected' : '' %>>Absent</option>
+            <option value="on_leave" <%= selectedStatus === 'on_leave' ? 'selected' : '' %>>On Leave</option>
+            <option value="rest_day" <%= selectedStatus === 'rest_day' ? 'selected' : '' %>>Rest Day</option>
+        </select>
+    </div>
+
+    <div style="display: flex; gap: 8px;">
+        <button type="submit" class="btn btn-primary">Generate Report</button>
+        <a href="/reports" class="btn btn-ghost">Reset</a>
+    </div>
+</form>
+
+<!-- Results Preview Table -->
+<div class="card">
+    <div class="card-header">
+        <h3>Report Preview (<%= records.length %> Records Displayed)</h3>
+        <span class="text-muted text-xs">Showing up to 200 records on screen. Full dataset exported via download buttons above.</span>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Employee ID</th>
+                        <th>Employee Name</th>
+                        <th>Warehouse</th>
+                        <th>Position</th>
+                        <th>Status</th>
+                        <th>Time In</th>
+                        <th>Time Out</th>
+                        <th>Remarks</th>
+                        <th>Recorded By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (records.length === 0) { %>
+                        <tr><td colspan="10" class="text-center" style="padding: 32px;">No attendance records found for this date range and filter criteria.</td></tr>
+                    <% } else { %>
+                        <% records.forEach(r => { %>
+                            <tr>
+                                <td><strong><%= formatDate(r.work_date) %></strong></td>
+                                <td><%= r.emp_code %></td>
+                                <td><%= r.employee_name %></td>
+                                <td><%= r.area_name %></td>
+                                <td><%= r.position_title || '—' %></td>
+                                <td><%- include('../partials/status-badge', { status: r.status }) %></td>
+                                <td><%= r.time_in ? formatTime(r.time_in) : '—' %></td>
+                                <td><%= r.time_out ? formatTime(r.time_out) : '—' %></td>
+                                <td><%= r.remarks || '—' %></td>
+                                <td><%= r.recorder_name || 'System' %></td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/layout-bottom') %>
