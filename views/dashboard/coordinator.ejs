@@ -1,0 +1,199 @@
+<%- include('../partials/layout-top') %>
+
+<div class="page-header">
+    <div>
+        <h2>Coordinator Dashboard</h2>
+        <div class="breadcrumb">
+            <span>Area Assignment:</span>
+            <strong style="color: var(--color-primary);"><%= typeof userArea !== 'undefined' && userArea ? userArea.name : 'No Area Assigned' %></strong>
+            <span>•</span>
+            <span>Today: <%= formatDate(today) %></span>
+        </div>
+    </div>
+</div>
+
+<% if (typeof noArea !== 'undefined' && noArea) { %>
+    <div class="alert alert-warning">
+        <span class="alert-icon">⚠️</span>
+        <div>Your coordinator account is active, but you have not yet been assigned to an area/warehouse by HR. Please contact the HR department.</div>
+    </div>
+<% } else { %>
+
+    <!-- Summary Cards -->
+    <div class="summary-cards">
+        <div class="summary-card">
+            <div class="card-icon green">✓</div>
+            <div class="card-data">
+                <h4><%= presentCount %></h4>
+                <p>Present Today</p>
+            </div>
+        </div>
+
+        <div class="summary-card">
+            <div class="card-icon red">✕</div>
+            <div class="card-data">
+                <h4><%= absentCount %></h4>
+                <p>Absent Today</p>
+            </div>
+        </div>
+
+        <div class="summary-card">
+            <div class="card-icon yellow">🏥</div>
+            <div class="card-data">
+                <h4><%= pendingBtw.length %></h4>
+                <p>Pending Back-to-Work</p>
+            </div>
+        </div>
+
+        <div class="summary-card">
+            <div class="card-icon blue">🤝</div>
+            <div class="card-data">
+                <h4><%= manpowerRequests.length %></h4>
+                <p>Active Manpower Requests</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Coordinator Shortcuts -->
+    <div style="margin-bottom: 24px;">
+        <h3 style="font-size: 0.95rem; font-weight: 600; color: var(--color-gray-600); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Quick Actions</h3>
+        <div class="action-grid">
+            <a href="/attendance?date=<%= today %>" class="action-card">
+                <div class="action-icon">📋</div>
+                <div class="action-label">Mark Attendance</div>
+            </a>
+            <a href="/employees/new" class="action-card">
+                <div class="action-icon">➕</div>
+                <div class="action-label">Add Employee</div>
+            </a>
+            <a href="/manpower/new" class="action-card">
+                <div class="action-icon">🤝</div>
+                <div class="action-label">Request Manpower</div>
+            </a>
+            <a href="/concerns/new" class="action-card">
+                <div class="action-icon">💬</div>
+                <div class="action-label">Report Concern</div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Coordinator's Own Attendance Status -->
+    <div class="card mb-3">
+        <div class="card-header">
+            <h3>⏱️ My Daily Attendance</h3>
+            <span><%= formatDate(today) %></span>
+        </div>
+        <div class="card-body">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                <div>
+                    <% if (!ownAttendance) { %>
+                        <p style="color: var(--color-gray-600); font-size: 0.9rem;">You have not timed in for today's shift yet.</p>
+                    <% } else { %>
+                        <p style="font-size: 0.9rem;">
+                            Time-In: <strong style="color: var(--color-success);"><%= formatTime(ownAttendance.time_in) %></strong>
+                            <% if (ownAttendance.time_out) { %>
+                                • Time-Out: <strong style="color: var(--color-primary);"><%= formatTime(ownAttendance.time_out) %></strong>
+                            <% } else { %>
+                                • <span class="badge badge-warning">Shift In Progress</span>
+                            <% } %>
+                        </p>
+                    <% } %>
+                </div>
+                <div class="btn-group">
+                    <% if (!ownAttendance) { %>
+                        <form action="/coordinator-attendance/time-in" method="POST" style="display: inline;">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <button type="submit" class="btn btn-success">⏱️ Record Time-In</button>
+                        </form>
+                    <% } else if (!ownAttendance.time_out) { %>
+                        <form action="/coordinator-attendance/time-out" method="POST" style="display: inline;">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <button type="submit" class="btn btn-primary">⏱️ Record Time-Out</button>
+                        </form>
+                    <% } else { %>
+                        <span class="badge badge-success" style="padding: 8px 14px; font-size: 0.85rem;">Shift Completed</span>
+                    <% } %>
+                    <a href="/coordinator-attendance" class="btn btn-outline btn-sm">View Log / Request Correction</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px;">
+        <!-- Needs Your Action List -->
+        <div class="card">
+            <div class="card-header">
+                <h3>⚡ Needs Your Action</h3>
+                <span class="badge badge-primary"><%= incomingWorkers.length + pendingBtw.length %></span>
+            </div>
+            <div class="card-body" style="padding: 0;">
+                <% if (incomingWorkers.length === 0 && pendingBtw.length === 0) { %>
+                    <div class="empty-state">
+                        <p>No urgent pending items for your attention!</p>
+                    </div>
+                <% } else { %>
+                    <ul class="action-list">
+                        <!-- Incoming workers awaiting confirmation -->
+                        <% incomingWorkers.forEach(w => { %>
+                            <li class="action-list-item">
+                                <div class="item-info">
+                                    <div class="item-title">Confirm Worker Arrival: <%= w.worker_name || w.emp_name %></div>
+                                    <div class="item-subtitle">Requested: <%= w.requested_position || 'General' %> • Deployment: <%= formatDate(w.deployment_date) %></div>
+                                </div>
+                                <a href="/manpower/<%= w.request_id %>" class="btn btn-sm btn-primary">Confirm</a>
+                            </li>
+                        <% }) %>
+
+                        <!-- Pending BTW cases -->
+                        <% pendingBtw.forEach(b => { %>
+                            <li class="action-list-item">
+                                <div class="item-info">
+                                    <div class="item-title">BTW Clearance: <%= b.full_name %> (<%= b.emp_code %>)</div>
+                                    <div class="item-subtitle">Ref: <%= b.case_ref %> • Status: <%= b.status.replace(/_/g, ' ') %></div>
+                                </div>
+                                <a href="/btw/<%= b.id %>" class="btn btn-sm btn-outline">View Case</a>
+                            </li>
+                        <% }) %>
+                    </ul>
+                <% } %>
+            </div>
+        </div>
+
+        <!-- Today's Absences -->
+        <div class="card">
+            <div class="card-header">
+                <h3>❌ Absent Employees Today</h3>
+                <span class="badge badge-danger"><%= absentToday.length %></span>
+            </div>
+            <div class="card-body" style="padding: 0;">
+                <% if (absentToday.length === 0) { %>
+                    <div class="empty-state">
+                        <p>No employees reported absent today.</p>
+                    </div>
+                <% } else { %>
+                    <ul class="action-list">
+                        <% absentToday.forEach(emp => { %>
+                            <li class="action-list-item">
+                                <div class="item-info">
+                                    <div class="item-title"><%= emp.full_name %> (<%= emp.employee_id %>)</div>
+                                    <div class="item-subtitle">
+                                        <%= emp.position_title || 'Worker' %>
+                                        <% if (emp.remarks) { %> • <%= emp.remarks %><% } %>
+                                    </div>
+                                </div>
+                                <% if (emp.btw_id) { %>
+                                    <a href="/btw/<%= emp.btw_id %>" class="btn btn-sm btn-warning">View Clearance</a>
+                                <% } else { %>
+                                    <span class="badge badge-secondary">Processing</span>
+                                <% } %>
+                            </li>
+                        <% }) %>
+                    </ul>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+<% } %>
+
+<%- include('../partials/layout-bottom') %>

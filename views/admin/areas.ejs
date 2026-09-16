@@ -1,0 +1,81 @@
+<%- include('../partials/layout-top') %>
+
+<div class="page-header">
+    <div>
+        <h2>Warehouses & Operational Areas</h2>
+        <div class="breadcrumb">
+            <a href="/dashboard">Dashboard</a>
+            <span>/</span>
+            <span>Locations</span>
+        </div>
+    </div>
+    <div>
+        <button type="button" class="btn btn-primary" onclick="document.getElementById('addAreaCard').style.display = document.getElementById('addAreaCard').style.display === 'none' ? 'block' : 'none'">
+            ➕ Add Warehouse
+        </button>
+    </div>
+</div>
+
+<!-- Add Area Card -->
+<div id="addAreaCard" class="card mb-3" style="display: none; border: 2px solid var(--color-primary);">
+    <div class="card-header" style="background: rgba(27,42,74,0.05);">
+        <h3>Register New Warehouse / Area</h3>
+    </div>
+    <div class="card-body">
+        <form action="/admin/areas" method="POST">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="name">Warehouse Name <span class="required">*</span></label>
+                    <input type="text" id="name" name="name" class="form-control" placeholder="e.g. Warehouse D - Alabang" required>
+                </div>
+                <div class="form-group">
+                    <label for="description">Location Details / Description</label>
+                    <input type="text" id="description" name="description" class="form-control" placeholder="e.g. Alabang distribution hub, Cold storage">
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary">Save Warehouse</button>
+                <button type="button" class="btn btn-outline" onclick="document.getElementById('addAreaCard').style.display = 'none'">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Warehouses Table -->
+<div class="card">
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Warehouse Name</th>
+                        <th>Description</th>
+                        <th>Assigned Coordinator</th>
+                        <th>Active Workforce</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% areas.forEach(a => { %>
+                        <tr>
+                            <td><strong><%= a.name %></strong></td>
+                            <td><%= a.description || '—' %></td>
+                            <td><%= a.current_coordinator || '<span class="text-muted">Unassigned</span>' %></td>
+                            <td><span class="badge badge-primary"><%= a.active_workers %> Workers</span></td>
+                            <td>
+                                <span class="badge <%= a.is_active ? 'badge-success' : 'badge-secondary' %>">
+                                    <%= a.is_active ? 'ACTIVE' : 'INACTIVE' %>
+                                </span>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/layout-bottom') %>

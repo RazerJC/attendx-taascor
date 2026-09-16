@@ -1,0 +1,227 @@
+<%- include('../partials/layout-top') %>
+
+<div class="page-header">
+    <div>
+        <h2><%= employee.full_name %></h2>
+        <div class="breadcrumb">
+            <a href="/employees">Employees</a>
+            <span>/</span>
+            <span><%= employee.employee_id %></span>
+            <span>•</span>
+            <span class="badge <%= employee.status === 'active' ? 'badge-success' : 'badge-secondary' %>"><%= employee.status.toUpperCase() %></span>
+        </div>
+    </div>
+    <div class="btn-group">
+        <a href="/employees/<%= employee.id %>/edit" class="btn btn-outline">✏️ Edit Details</a>
+        <a href="/concerns/new?employee_id=<%= employee.id %>" class="btn btn-outline">💬 Report Concern</a>
+    </div>
+</div>
+
+<!-- Details & Inactivation Alert -->
+<% if (employee.status === 'inactive') { %>
+    <div class="alert alert-warning mb-2">
+        <span class="alert-icon">⚠️</span>
+        <div>
+            <strong>Inactive Employee Record:</strong> Inactivated on <%= formatDate(employee.inactivation_date) %>.<br>
+            <strong>Reason:</strong> <%= employee.inactivation_reason || 'No reason provided' %><br>
+            <em>All historical schedules, attendance, and Back-to-Work cases remain preserved.</em>
+        </div>
+    </div>
+<% } %>
+
+<div class="detail-grid card mb-3" style="padding: 24px;">
+    <div class="detail-item">
+        <div class="detail-label">Employee ID</div>
+        <div class="detail-value"><%= employee.employee_id %></div>
+    </div>
+    <div class="detail-item">
+        <div class="detail-label">Assigned Warehouse</div>
+        <div class="detail-value"><%= employee.area_name %></div>
+    </div>
+    <div class="detail-item">
+        <div class="detail-label">Position</div>
+        <div class="detail-value"><%= employee.position_title || '—' %></div>
+    </div>
+    <div class="detail-item">
+        <div class="detail-label">Assigned Coordinator</div>
+        <div class="detail-value"><%= employee.coordinator_name || '—' %></div>
+    </div>
+    <div class="detail-item">
+        <div class="detail-label">Employment Start Date</div>
+        <div class="detail-value"><%= formatDate(employee.employment_start_date) %></div>
+    </div>
+    <div class="detail-item">
+        <div class="detail-label">System Remarks</div>
+        <div class="detail-value"><%= employee.remarks || '—' %></div>
+    </div>
+</div>
+
+<!-- Status Preservation & Deactivation Action -->
+<div class="card mb-3">
+    <div class="card-header">
+        <h3>Employment Status & Historical Records</h3>
+    </div>
+    <div class="card-body">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div>
+                <p style="font-size: 0.88rem; color: var(--color-gray-600); margin-bottom: 4px;">
+                    Current Status: <strong style="color: var(--color-gray-800);"><%= employee.status.toUpperCase() %></strong>
+                </p>
+                <p style="font-size: 0.8rem; color: var(--color-gray-500);">
+                    Inactivating an employee preserves all schedules, attendance logs, and back-to-work clearance threads without data loss.
+                </p>
+            </div>
+            <div>
+                <% if (employee.status === 'active') { %>
+                    <button class="btn btn-danger" onclick="document.getElementById('deactivateModal').style.display='block'">
+                        Deactivate Employee
+                    </button>
+                <% } else { %>
+                    <form action="/employees/<%= employee.id %>/toggle-status" method="POST" style="display: inline;">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button type="submit" class="btn btn-success">
+                            Reactivate Employee
+                        </button>
+                    </form>
+                <% } %>
+            </div>
+        </div>
+
+        <!-- Deactivate Modal / Form -->
+        <div id="deactivateModal" style="display: none; margin-top: 20px; padding: 16px; background: var(--color-gray-50); border: 1px solid var(--color-gray-200); border-radius: 6px;">
+            <h4 style="font-size: 0.95rem; margin-bottom: 8px; color: var(--color-danger);">Confirm Deactivation</h4>
+            <form action="/employees/<%= employee.id %>/toggle-status" method="POST">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <div class="form-group">
+                    <label for="inactivation_reason">Reason for Inactivation <span class="required">*</span></label>
+                    <input type="text" id="inactivation_reason" name="inactivation_reason" class="form-control" placeholder="e.g. Resigned, Contract Completed, Transfer" required>
+                </div>
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-danger btn-sm">Confirm Deactivate</button>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('deactivateModal').style.display='none'">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Historical Attendance Summary & Recent Records -->
+<div class="card mb-3">
+    <div class="card-header">
+        <h3>📋 Attendance History</h3>
+        <span class="badge badge-secondary"><%= attendanceStats ? attendanceStats.total_records : 0 %> Total Records</span>
+    </div>
+    <div class="card-body">
+        <div class="summary-cards" style="margin-bottom: 20px;">
+            <div class="summary-card" style="padding: 12px 16px;">
+                <div class="card-data">
+                    <h4><%= attendanceStats ? attendanceStats.present_count || 0 : 0 %></h4>
+                    <p>Present</p>
+                </div>
+            </div>
+            <div class="summary-card" style="padding: 12px 16px;">
+                <div class="card-data">
+                    <h4><%= attendanceStats ? attendanceStats.late_count || 0 : 0 %></h4>
+                    <p>Late</p>
+                </div>
+            </div>
+            <div class="summary-card" style="padding: 12px 16px;">
+                <div class="card-data">
+                    <h4><%= attendanceStats ? attendanceStats.absent_count || 0 : 0 %></h4>
+                    <p>Absent</p>
+                </div>
+            </div>
+            <div class="summary-card" style="padding: 12px 16px;">
+                <div class="card-data">
+                    <h4><%= attendanceStats ? attendanceStats.leave_count || 0 : 0 %></h4>
+                    <p>On Leave</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Time In</th>
+                        <th>Time Out</th>
+                        <th>Remarks</th>
+                        <th>Recorded By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (recentAttendance.length === 0) { %>
+                        <tr><td colspan="6" class="text-center">No attendance recorded yet.</td></tr>
+                    <% } else { %>
+                        <% recentAttendance.forEach(a => { %>
+                            <tr>
+                                <td><%= formatDate(a.work_date) %></td>
+                                <td><%- include('../partials/status-badge', { status: a.status }) %></td>
+                                <td><%= a.time_in ? formatTime(a.time_in) : '—' %></td>
+                                <td><%= a.time_out ? formatTime(a.time_out) : '—' %></td>
+                                <td><%= a.remarks || '—' %></td>
+                                <td><%= a.recorded_by_name || 'System' %></td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+    <!-- Back-to-Work Clearance Cases -->
+    <div class="card">
+        <div class="card-header">
+            <h3>🏥 Back-to-Work Clearance Cases</h3>
+            <span class="badge badge-primary"><%= btwCases.length %></span>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            <% if (btwCases.length === 0) { %>
+                <div class="empty-state" style="padding: 24px;"><p>No clearance cases on record.</p></div>
+            <% } else { %>
+                <ul class="action-list">
+                    <% btwCases.forEach(b => { %>
+                        <li class="action-list-item">
+                            <div class="item-info">
+                                <div class="item-title"><%= b.case_ref %></div>
+                                <div class="item-subtitle"><%- include('../partials/status-badge', { status: b.status }) %> • <%= formatDate(b.created_at) %></div>
+                            </div>
+                            <a href="/btw/<%= b.id %>" class="btn btn-sm btn-outline">View Case</a>
+                        </li>
+                    <% }) %>
+                </ul>
+            <% } %>
+        </div>
+    </div>
+
+    <!-- Concerns -->
+    <div class="card">
+        <div class="card-header">
+            <h3>💬 Employee Concerns</h3>
+            <span class="badge badge-primary"><%= concerns.length %></span>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            <% if (concerns.length === 0) { %>
+                <div class="empty-state" style="padding: 24px;"><p>No concerns reported.</p></div>
+            <% } else { %>
+                <ul class="action-list">
+                    <% concerns.forEach(c => { %>
+                        <li class="action-list-item">
+                            <div class="item-info">
+                                <div class="item-title"><%= c.category %></div>
+                                <div class="item-subtitle"><%- include('../partials/status-badge', { status: c.status }) %> • <%= formatDate(c.created_at) %></div>
+                            </div>
+                            <a href="/concerns/<%= c.id %>" class="btn btn-sm btn-outline">View Thread</a>
+                        </li>
+                    <% }) %>
+                </ul>
+            <% } %>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/layout-bottom') %>

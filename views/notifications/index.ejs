@@ -1,0 +1,57 @@
+<%- include('../partials/layout-top') %>
+
+<div class="page-header">
+    <div>
+        <h2>Notifications</h2>
+        <div class="breadcrumb">
+            <span>System alerts, approvals, case decisions, and worker deployments</span>
+        </div>
+    </div>
+    <div>
+        <form action="/notifications/mark-all-read" method="POST">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button type="submit" class="btn btn-outline btn-sm">Mark All as Read</button>
+        </form>
+    </div>
+</div>
+
+<div class="card" style="max-width: 800px;">
+    <div class="card-body" style="padding: 0;">
+        <% if (notifications.length === 0) { %>
+            <div class="empty-state">
+                <div class="empty-icon">🔔</div>
+                <h3>No notifications</h3>
+                <p>You're all caught up with your operational updates.</p>
+            </div>
+        <% } else { %>
+            <div class="notif-list">
+                <% notifications.forEach(n => { %>
+                    <div class="notif-item <%= n.is_read ? '' : 'unread' %>" style="display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 16px 20px;">
+                        <div style="flex: 1;">
+                            <div class="notif-title" style="font-size: 0.9rem; margin-bottom: 4px;">
+                                <% if (n.link) { %>
+                                    <a href="<%= n.link %>" style="color: inherit; text-decoration: underline;">
+                                        <%= n.title %>
+                                    </a>
+                                <% } else { %>
+                                    <%= n.title %>
+                                <% } %>
+                            </div>
+                            <div class="notif-msg" style="font-size: 0.85rem; color: var(--color-gray-600);"><%= n.message %></div>
+                            <div class="notif-time" style="margin-top: 6px;"><%= formatDateTime(n.created_at) %></div>
+                        </div>
+
+                        <% if (!n.is_read) { %>
+                            <form action="/notifications/<%= n.id %>/read" method="POST">
+                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                <button type="submit" class="btn btn-ghost btn-sm" title="Mark as read">✓</button>
+                            </form>
+                        <% } %>
+                    </div>
+                <% }) %>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<%- include('../partials/layout-bottom') %>

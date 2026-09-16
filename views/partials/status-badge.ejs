@@ -1,0 +1,50 @@
+<% 
+// Helper partial for status badges
+let badgeClass = 'badge-secondary';
+let label = (typeof status !== 'undefined' && status) ? status : '';
+
+switch (label.toLowerCase()) {
+    case 'present':
+    case 'active':
+    case 'approved':
+    case 'resolved':
+    case 'confirmed':
+    case 'filled':
+        badgeClass = 'badge-success';
+        break;
+    case 'late':
+    case 'pending':
+    case 'pending_hr_review':
+    case 'under_review':
+    case 'partially_filled':
+    case 'proposed':
+        badgeClass = 'badge-warning';
+        break;
+    case 'absent':
+    case 'rejected':
+    case 'not_approved':
+    case 'suspended':
+    case 'did_not_report':
+    case 'declined':
+        badgeClass = 'badge-danger';
+        break;
+    case 'on_leave':
+    case 'for_clarification':
+    case 'for_employee_reporting':
+        badgeClass = 'badge-info';
+        break;
+    case 'rest_day':
+    case 'inactive':
+    case 'cancelled':
+        badgeClass = 'badge-secondary';
+        break;
+    case 'submitted':
+        badgeClass = 'badge-primary';
+        break;
+    default:
+        badgeClass = 'badge-secondary';
+}
+%>
+<span class="badge <%= badgeClass %>">
+    <%= label.replace(/_/g, ' ') %>
+</span>

@@ -1,53 +1,7 @@
-# OS files
-Thumbs.db
-.DS_Store
-desktop.ini
-
-# IDE
-.vscode/
-.idea/
-
-# Batch files (local only)
-*.bat
-
-# Shell scripts (only start.sh is needed — others are local)
-run-setup.sh
-diagnostic_and_run.sh
-
-# Word/Office documents (large, not needed in deploy)
-*.docx
-*.xlsx
-*.csv
-~$*
-
-# Instruction / delivery text files (local only)
-00_START_HERE_READ_THIS.txt
-ALL_DONE_READ_THIS.txt
-COMPLETE.txt
-DELIVERY_SUMMARY.txt
-EXECUTE_NOW.txt
-EXECUTION_INSTRUCTIONS_FINAL.txt
-EXECUTION_READY.txt
-FILE_LISTING_AND_CHECKLIST.txt
-FINAL_INSTRUCTIONS.txt
-FINAL_SUMMARY.txt
-HOW_TO_EXECUTE_ORGANIZATION.txt
-INDEX_AND_QUICK_START.txt
-PROCESSING_INSTRUCTIONS.md
-PROJECT_COMPLETE.txt
-PROJECT_COMPLETION_SUMMARY.txt
-QUICK_REFERENCE.txt
-READY_TO_RUN.txt
-SETUP_COMPLETE.txt
-START_HERE_FINAL.txt
-SYSTEM_READY.txt
-
-# Database backups (never commit real DB dumps)
-backups/
-
-# Uploaded files (user data — never commit)
-uploads/*
-!uploads/.htaccess
-
-# Antigravity
-.antigravityignore
+node_modules/
+scratch/
+.env
+*.log
+*.db
+*.db-wal
+*.db-shm
