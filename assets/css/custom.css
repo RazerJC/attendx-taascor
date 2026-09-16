@@ -1,0 +1,599 @@
+/* ====================================
+   TAASCOR Attendance — Custom Styles
+   Extends Tailwind with animations
+   ==================================== */
+
+/* --- Login Background Animation --- */
+.login-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: radial-gradient(ellipse at 20% 50%, rgba(32, 201, 151, 0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(56, 217, 169, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(12, 166, 120, 0.04) 0%, transparent 60%);
+    animation: bgPulse 8s ease-in-out infinite alternate;
+}
+
+@keyframes bgPulse {
+    0%   { opacity: 0.6; transform: scale(1); }
+    100% { opacity: 1;   transform: scale(1.05); }
+}
+
+/* --- Login Card Fade-in --- */
+.login-card {
+    animation: cardFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes cardFadeIn {
+    from { opacity: 0; transform: translateY(24px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.login-logo {
+    animation: logoPop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
+}
+
+@keyframes logoPop {
+    from { opacity: 0; transform: scale(0.5) rotate(-15deg); }
+    to   { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+/* --- Sidebar Nav Links --- */
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.875rem;
+    border-radius: 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #9ca3af;
+    transition: all 0.2s ease;
+}
+
+.nav-link:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.nav-link.active {
+    color: #38d9a9;
+    background: rgba(56, 217, 169, 0.08);
+}
+
+.nav-link.active svg {
+    color: #38d9a9;
+}
+
+/* --- Stat Cards --- */
+.stat-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stat-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.stat-card .stat-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.125rem;
+}
+
+.stat-card .stat-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-top: 0.75rem;
+}
+
+.stat-card .stat-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #9ca3af;
+    margin-top: 0.25rem;
+}
+
+/* --- Glass Table --- */
+.glass-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.glass-table thead th {
+    padding: 0.75rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #9ca3af;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    text-align: left;
+    white-space: nowrap;
+}
+
+.glass-table tbody td {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    color: #e5e7eb;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    vertical-align: middle;
+}
+
+.glass-table tbody tr {
+    transition: background 0.15s ease;
+}
+
+.glass-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* --- Status Badges --- */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.badge-present    { background: rgba(34,197,94,0.12);  color: #4ade80; }
+.badge-absent     { background: rgba(239,68,68,0.12);  color: #f87171; }
+.badge-late-warn  { background: rgba(251,191,36,0.12); color: #fbbf24; }
+.badge-undertime  { background: rgba(249,115,22,0.12); color: #f97316; }
+.badge-overtime   { background: rgba(6,182,212,0.12);  color: #06b6d4; }
+.badge-warning    { background: rgba(251,191,36,0.12); color: #fbbf24; }
+.badge-nte        { background: rgba(239,68,68,0.12);  color: #f87171; }
+.badge-no_work    { background: rgba(107,114,128,0.12); color: #9ca3af; }
+.badge-leave      { background: rgba(168,85,247,0.12);  color: #c084fc; }
+.badge-sent_home  { background: rgba(20,184,166,0.12);  color: #2dd4bf; }
+.badge-rest_day   { background: rgba(251,146,60,0.12);  color: #fb923c; }
+
+/* --- Attendance Toggle Buttons --- */
+.att-btn {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    border-radius: 0.75rem;
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: #b0b8c4;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+    pointer-events: auto;
+    position: relative;
+    z-index: 10;
+}
+
+.att-btn:active {
+    transform: scale(0.95);
+}
+
+.att-btn.selected-present  { background: rgba(34,197,94,0.15);  border-color: #22c55e; color: #4ade80; }
+.att-btn.selected-absent   { background: rgba(239,68,68,0.15);  border-color: #ef4444; color: #f87171; }
+.att-btn.selected-no_work  { background: rgba(107,114,128,0.15); border-color: #6b7280; color: #9ca3af; }
+.att-btn.selected-leave    { background: rgba(168,85,247,0.15);  border-color: #a855f7; color: #c084fc; }
+.att-btn.selected-sent_home { background: rgba(20,184,166,0.15); border-color: #14b8a6; color: #2dd4bf; }
+.att-btn.selected-rest_day  { background: rgba(251,146,60,0.15);  border-color: #f97316; color: #fb923c; }
+
+/* --- Glass Cards --- */
+.glass-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1rem;
+    overflow: hidden;
+}
+
+.glass-card-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.glass-card-body {
+    padding: 1.25rem;
+}
+
+/* --- Modals --- */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.modal-overlay.show {
+    display: flex;
+    animation: fadeIn 0.2s ease;
+}
+
+.modal-content {
+    background: #1a1d23;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1.25rem;
+    width: 100%;
+    max-width: 32rem;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Responsive table wrapper --- */
+.table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* --- Scrollbar --- */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+/* --- Page transition --- */
+main {
+    animation: pageIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pageIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Sidebar Logo --- */
+.sidebar-logo-img {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    border-radius: 0.625rem;
+}
+
+.login-logo-img {
+    width: 140px;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+}
+
+/* ==================================== 
+   THEME-AWARE BASE CLASSES
+   ==================================== */
+
+/* Body */
+.theme-body {
+    background: #0d0e12;
+    color: #f3f4f6;
+}
+
+/* Top bar */
+.theme-topbar {
+    background: rgba(20, 22, 26, 0.8);
+    border-color: rgba(255, 255, 255, 0.10);
+}
+
+/* Text */
+.theme-text-primary { color: #ffffff; }
+
+/* Toggle button */
+.theme-toggle-btn {
+    background: rgba(255, 255, 255, 0.06);
+    color: #9ca3af;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.theme-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+}
+
+/* ==================================== 
+   LIGHT MODE — Clean Professional
+   ==================================== */
+.light-mode .theme-body,
+.light-mode.theme-body {
+    background: #eef1f6 !important;
+    color: #1e293b !important;
+}
+
+/* Sidebar — stays dark for contrast */
+.light-mode #sidebar {
+    background: #2b3040;
+    border-color: #363b4a;
+}
+
+.light-mode #sidebar .border-glassBorder,
+.light-mode #sidebar .border-t {
+    border-color: #363b4a;
+}
+
+/* Sidebar logo area */
+.light-mode #sidebar .font-bold.text-white,
+.light-mode #sidebar .text-sm.text-white {
+    color: #e2e8f0;
+}
+.light-mode #sidebar .text-gray-500 {
+    color: #8892a4;
+}
+
+/* Sidebar nav links — stay dark-themed */
+.light-mode .nav-link {
+    color: #a0aab8;
+}
+.light-mode .nav-link:hover {
+    color: #e2e8f0;
+    background: rgba(255, 255, 255, 0.06);
+}
+.light-mode .nav-link.active {
+    color: #38d9a9;
+    background: rgba(56, 217, 169, 0.1);
+}
+.light-mode .nav-link.active svg {
+    color: #38d9a9;
+}
+
+/* Sidebar user footer */
+.light-mode .bg-dark-900\/40 {
+    background: rgba(0, 0, 0, 0.15) !important;
+}
+.light-mode #sidebar .text-white.truncate,
+.light-mode #sidebar .font-semibold.text-white {
+    color: #e2e8f0;
+}
+.light-mode #sidebar .text-primary-400 {
+    color: #38d9a9;
+}
+
+/* Top bar */
+.light-mode .theme-topbar {
+    background: #ffffff;
+    border-color: #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* Top bar text */
+.light-mode .theme-text-primary {
+    color: #0f172a;
+}
+
+/* Toggle button light mode */
+.light-mode .theme-toggle-btn {
+    background: #f1f5f9;
+    color: #475569;
+    border-color: #e2e8f0;
+}
+.light-mode .theme-toggle-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+/* Main content */
+.light-mode main {
+    background: #eef1f6;
+}
+
+/* Stat cards */
+.light-mode .stat-card {
+    background: #ffffff;
+    border-color: #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.light-mode .stat-card:hover {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+.light-mode .stat-card .stat-label {
+    color: #64748b;
+}
+
+/* Glass cards */
+.light-mode .glass-card {
+    background: #ffffff;
+    border-color: #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.light-mode .glass-card-header {
+    border-bottom-color: #f1f5f9;
+    background: #fafbfc;
+}
+
+/* Department folder text */
+.light-mode .glass-card .text-white,
+.light-mode .dept-folder .text-white {
+    color: #0f172a;
+}
+.light-mode .glass-card .text-gray-500 {
+    color: #64748b;
+}
+.light-mode .glass-card .text-gray-600 {
+    color: #94a3b8;
+}
+
+/* Folder expand body area */
+.light-mode .dept-body .hover\:bg-white\/\[0\.02\]:hover {
+    background: #f8fafc;
+}
+.light-mode .border-white\/\[0\.04\] {
+    border-color: #f1f5f9;
+}
+
+/* Glass table */
+.light-mode .glass-table thead th {
+    color: #475569;
+    border-bottom-color: #e2e8f0;
+    background: #fafbfc;
+}
+.light-mode .glass-table tbody td {
+    color: #334155;
+    border-bottom-color: #f1f5f9;
+}
+.light-mode .glass-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+/* Form inputs */
+.light-mode input[type="date"],
+.light-mode input[type="text"],
+.light-mode input[type="password"],
+.light-mode select,
+.light-mode textarea {
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+.light-mode input[type="date"]:focus,
+.light-mode input[type="text"]:focus,
+.light-mode select:focus {
+    border-color: #20c997 !important;
+    box-shadow: 0 0 0 3px rgba(32, 201, 151, 0.12) !important;
+}
+
+/* Modals */
+.light-mode .modal-overlay {
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(4px);
+}
+.light-mode .modal-content {
+    background: #ffffff;
+    border-color: #e2e8f0;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+.light-mode .modal-content .text-white {
+    color: #0f172a;
+}
+.light-mode .modal-content .text-gray-500 {
+    color: #64748b;
+}
+.light-mode .modal-content .border-white\/10 {
+    border-color: #e2e8f0;
+}
+
+/* Attendance toggle buttons */
+.light-mode .att-btn {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    color: #475569;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.light-mode .att-btn:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+/* Greeting banner */
+.light-mode .from-primary-600\/20 {
+    background: linear-gradient(135deg, rgba(32, 201, 151, 0.1), rgba(32, 201, 151, 0.03), #ffffff) !important;
+    border-color: rgba(32, 201, 151, 0.2) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.light-mode .border-primary-500\/15 {
+    border-color: rgba(32, 201, 151, 0.25) !important;
+}
+
+/* Flash messages */
+.light-mode .bg-green-500\/10 { background: rgba(34, 197, 94, 0.08); }
+.light-mode .bg-red-500\/10   { background: rgba(239, 68, 68, 0.08); }
+.light-mode .bg-blue-500\/10  { background: rgba(59, 130, 246, 0.08); }
+
+/* General text overrides in main content */
+.light-mode main .text-white {
+    color: #0f172a;
+}
+.light-mode main .text-gray-500:not(.stat-label) {
+    color: #64748b;
+}
+.light-mode main .text-gray-600 {
+    color: #94a3b8;
+}
+
+/* Pill badges in light mode */
+.light-mode .bg-white\/5 {
+    background: rgba(15, 23, 42, 0.06);
+}
+
+/* White bg utility overrides */
+.light-mode .bg-dark-700\/50,
+.light-mode .bg-dark-700 {
+    background: #ffffff !important;
+}
+.light-mode .border-white\/10 {
+    border-color: #e2e8f0 !important;
+}
+
+/* Record Attendance / action buttons */
+.light-mode .from-primary-600 {
+    box-shadow: 0 4px 14px rgba(32, 201, 151, 0.3);
+}
+.light-mode .bg-primary-600 {
+    box-shadow: 0 4px 14px rgba(32, 201, 151, 0.3);
+}
+
+/* Add Department button */
+.light-mode .bg-dark-700\/80 {
+    background: #ffffff !important;
+}
+
+/* Scrollbar light mode */
+.light-mode ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.12);
+}
+.light-mode ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+/* Sidebar overlay */
+.light-mode #sidebarOverlay {
+    background: rgba(15, 23, 42, 0.3);
+}
+
+/* Smooth theme transition */
+.theme-body,
+#sidebar,
+.theme-topbar,
+.stat-card,
+.glass-card,
+.glass-card-header,
+.att-btn,
+.nav-link,
+.theme-toggle-btn,
+.modal-content {
+    transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
+}

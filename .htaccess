@@ -1,0 +1,23 @@
+# TAASCOR AttendX — Apache Security Configuration
+
+# Prevent directory browsing
+Options -Indexes
+
+# Security Headers (if mod_headers is enabled)
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Block access to sensitive files and hidden files
+<FilesMatch "^\.|\.(env|sql|log|ini|sh|bak|backup)$">
+    Require all denied
+</FilesMatch>
+
+# Block access to backups directory
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^backups/ - [F,L]
+</IfModule>

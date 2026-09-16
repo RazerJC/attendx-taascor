@@ -1,5 +1,12 @@
-node_modules
-scratch
+# Ignore unnecessary files for Docker build
 .git
-.env
-*.log
+.gitignore
+.dockerignore
+Dockerfile
+render.yaml
+*.md
+*.txt
+*.bat
+*.xlsx
+.antigravityignore
+DEPLOY_GUIDE.md
