@@ -254,7 +254,7 @@ router.get('/areas', requireAuth, requireAdminOrHR, async (req, res) => {
     const areas = (await db.prepare(`
         SELECT a.*,
                (SELECT COUNT(*) FROM employees WHERE area_id = a.id AND status = 'active') as active_workers,
-               (SELECT u.full_name FROM coordinator_area_assignments caa JOIN users u ON caa.user_id = u.id WHERE caa.area_id = a.id AND caa.is_current = 1 LIMIT 1) as current_coordinator
+               (SELECT GROUP_CONCAT(DISTINCT u.full_name SEPARATOR ', ') FROM coordinator_area_assignments caa JOIN users u ON caa.user_id = u.id WHERE caa.area_id = a.id AND caa.is_current = 1) as current_coordinator
         FROM areas a
         ORDER BY a.name ASC
     `).all());

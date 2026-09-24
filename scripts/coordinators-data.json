@@ -1,0 +1,784 @@
+{
+  "clients": [
+    "BI CHAIN",
+    "CABUYAO OFFICE",
+    "CAINIAO BULACAN",
+    "FSCI",
+    "HEAD OFFICE / UNASSIGNED",
+    "MSC",
+    "MULTIMIX",
+    "PHB MEYCUAYAN",
+    "PHBUL1",
+    "PHBUL4",
+    "PHCEB2",
+    "PHDV01",
+    "PHE-A",
+    "PHIXC",
+    "PHIXP",
+    "PHJ",
+    "PHL",
+    "PHLAG 1",
+    "PHLAG 10",
+    "PHLAG 11",
+    "PHLAG 12",
+    "PHLAG 2",
+    "PHLAG 3",
+    "PHLAG 4",
+    "PHLAG 5",
+    "PHLAG 6",
+    "PHLAG 7",
+    "PHLAG 8",
+    "PHLAG 9",
+    "PHPSG",
+    "SHINSEI"
+  ],
+  "coordinators": [
+    {
+      "normName": "AQUINO MARIDIE",
+      "rawName": "AQUINO, MARIDIE",
+      "fullName": "MARIDIE AQUINO",
+      "client": "FSCI",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "maridie.aquino@taascor.com",
+      "username": "maridie.aquino",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "PASA JUN MARK",
+      "rawName": "PASA, JUN MARK",
+      "fullName": "JUN MARK PASA",
+      "client": "BI CHAIN",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "jun.mark.pasa@taascor.com",
+      "username": "jun.mark.pasa",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "DEDALES JEMALYN",
+      "rawName": "DEDALES, JEMALYN",
+      "fullName": "JEMALYN DEDALES",
+      "client": "BI CHAIN",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "jemalyn.dedales@taascor.com",
+      "username": "jemalyn.dedales",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "AVIOLA MARICEL",
+      "rawName": "AVIOLA, MARICEL",
+      "fullName": "MARICEL AVIOLA",
+      "client": "SHINSEI",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "maricel.aviola@taascor.com",
+      "username": "maricel.aviola",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "DE CHAVEZ MARY JEAN",
+      "rawName": "DE CHAVEZ, MARY JEAN",
+      "fullName": "MARY JEAN DE CHAVEZ",
+      "client": "PHIXC",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "mary.jean.de.chavez@taascor.com",
+      "username": "mary.jean.de.chavez",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "ORBISTA JARIEL",
+      "rawName": "ORBISTA, JARIEL",
+      "fullName": "JARIEL ORBISTA",
+      "client": "PHIXC",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "jariel.orbista@taascor.com",
+      "username": "jariel.orbista",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "CHICA REYBERT",
+      "rawName": "CHICA, REYBERT",
+      "fullName": "REYBERT CHICA",
+      "client": "PHE-A",
+      "givenEmail": "",
+      "sources": [
+        "COOR",
+        "COOR (2)"
+      ],
+      "email": "Phe-A@taascor.com",
+      "generatedEmail": "reybert.chica@taascor.com",
+      "username": "reybert.chica",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "CABALUNA LORENZ",
+      "rawName": "CABALUNA, LORENZ",
+      "fullName": "LORENZ CABALUNA",
+      "client": "PHE-A",
+      "givenEmail": "",
+      "sources": [
+        "COOR",
+        "COOR (2)"
+      ],
+      "email": "Phe-A@taascor.com",
+      "generatedEmail": "lorenz.cabaluna@taascor.com",
+      "username": "lorenz.cabaluna",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "MAGLIPAS ANGEL",
+      "rawName": "MAGLIPAS, ANGEL",
+      "fullName": "ANGEL MAGLIPAS",
+      "client": "PHL",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "angel.maglipas@taascor.com",
+      "username": "angel.maglipas",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "ALABATA JOSHUA LOUIE",
+      "rawName": "ALABATA, JOSHUA LOUIE",
+      "fullName": "JOSHUA LOUIE ALABATA",
+      "client": "PHL",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "joshua.louie.alabata@taascor.com",
+      "username": "joshua.louie.alabata",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "PADILLA RENE",
+      "rawName": "PADILLA, RENE",
+      "fullName": "RENE PADILLA",
+      "client": "PHL",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "rene.padilla@taascor.com",
+      "username": "rene.padilla",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "NOPRADA RASELL",
+      "rawName": "NOPRADA, RASELL",
+      "fullName": "RASELL NOPRADA",
+      "client": "PHLAG 1",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "rasell.noprada@taascor.com",
+      "username": "rasell.noprada",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "LABANDILO RHOMAR",
+      "rawName": "LABANDILO, RHOMAR",
+      "fullName": "RHOMAR LABANDILO",
+      "client": "PHLAG 1",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "rhomar.labandilo@taascor.com",
+      "username": "rhomar.labandilo",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "REY THEZA",
+      "rawName": "REY, THEZA",
+      "fullName": "THEZA REY",
+      "client": "PHLAG 2",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "theza.rey@taascor.com",
+      "username": "theza.rey",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "JEREMILLOS JOHN REMZON",
+      "rawName": "JEREMILLOS, JOHN REMZON",
+      "fullName": "JOHN REMZON JEREMILLOS",
+      "client": "PHLAG 2",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "john.remzon.jeremillos@taascor.com",
+      "username": "john.remzon.jeremillos",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "BERUELA AARON JOSHUA",
+      "rawName": "BERUELA, AARON JOSHUA",
+      "fullName": "AARON JOSHUA BERUELA",
+      "client": "PHLAG 3",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "aaron.joshua.beruela@taascor.com",
+      "username": "aaron.joshua.beruela",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "DEMONTEVERDE NICOLE",
+      "rawName": "DEMONTEVERDE, NICOLE",
+      "fullName": "NICOLE DEMONTEVERDE",
+      "client": "PHLAG 3",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "nicole.demonteverde@taascor.com",
+      "username": "nicole.demonteverde",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "SORIANO MARK JAYSON",
+      "rawName": "SORIANO, MARK JAYSON",
+      "fullName": "MARK JAYSON SORIANO",
+      "client": "PHLAG 4",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "mark.jayson.soriano@taascor.com",
+      "username": "mark.jayson.soriano",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "ALITIN MOISES",
+      "rawName": "ALITIN, MOISES",
+      "fullName": "MOISES ALITIN",
+      "client": "PHLAG 5",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "moises.alitin@taascor.com",
+      "username": "moises.alitin",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "TUIZA JHOMEL",
+      "rawName": "TUIZA, JHOMEL",
+      "fullName": "JHOMEL TUIZA",
+      "client": "PHLAG 5",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "jhomel.tuiza@taascor.com",
+      "username": "jhomel.tuiza",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "MODELO LANCE",
+      "rawName": "MODELO, LANCE",
+      "fullName": "LANCE MODELO",
+      "client": "PHLAG 6",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "lance.modelo@taascor.com",
+      "username": "lance.modelo",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "ADAP DENNIS JOHN",
+      "rawName": "ADAP, DENNIS JOHN",
+      "fullName": "DENNIS JOHN ADAP",
+      "client": "PHLAG 7",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "dennis.john.adap@taascor.com",
+      "username": "dennis.john.adap",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "DE LEUS MARLIE",
+      "rawName": "DE LEUS, MARLIE",
+      "fullName": "MARLIE DE LEUS",
+      "client": "PHLAG 8",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "marlie.de.leus@taascor.com",
+      "username": "marlie.de.leus",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "DACCA DAICY MAE",
+      "rawName": "DACCA, DAICY MAE",
+      "fullName": "DAICY MAE DACCA",
+      "client": "PHLAG 8",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "daicy.mae.dacca@taascor.com",
+      "username": "daicy.mae.dacca",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "MARY JOY BARBECHO",
+      "rawName": "MARY JOY BARBECHO",
+      "fullName": "MARY JOY BARBECHO",
+      "client": "PHLAG 9",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "mary.joy.barbecho@taascor.com",
+      "username": "mary.joy.barbecho",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "RONNIE JOHN CANELA",
+      "rawName": "RONNIE JOHN CANELA",
+      "fullName": "RONNIE JOHN CANELA",
+      "client": "PHLAG 10",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "ronnie.john.canela@taascor.com",
+      "username": "ronnie.john.canela",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "PANANDIGAN PAHAD",
+      "rawName": "PANANDIGAN, PAHAD",
+      "fullName": "PAHAD PANANDIGAN",
+      "client": "PHLAG 11",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "pahad.panandigan@taascor.com",
+      "username": "pahad.panandigan",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "ABUNDANCIA KENNETH",
+      "rawName": "ABUNDANCIA, KENNETH",
+      "fullName": "KENNETH ABUNDANCIA",
+      "client": "PHLAG 11",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "kenneth.abundancia@taascor.com",
+      "username": "kenneth.abundancia",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "BADILLA KYLE",
+      "rawName": "BADILLA, KYLE",
+      "fullName": "KYLE BADILLA",
+      "client": "PHLAG 12",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "kyle.badilla@taascor.com",
+      "username": "kyle.badilla",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "OROPONG SHIELA MAE",
+      "rawName": "OROPONG, SHIELA MAE",
+      "fullName": "SHIELA MAE OROPONG",
+      "client": "PHLAG 12",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "shiela.mae.oropong@taascor.com",
+      "username": "shiela.mae.oropong",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "PILAO GEM",
+      "rawName": "PILAO, GEM",
+      "fullName": "GEM PILAO",
+      "client": "PHPSG",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "gem.pilao@taascor.com",
+      "username": "gem.pilao",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "TOLANG CHRISTIAN",
+      "rawName": "TOLANG, CHRISTIAN",
+      "fullName": "CHRISTIAN TOLANG",
+      "client": "PHB MEYCUAYAN",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "christian.tolang@taascor.com",
+      "username": "christian.tolang",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "HERNANDEZ ABEGAEL",
+      "rawName": "HERNANDEZ, ABEGAEL",
+      "fullName": "ABEGAEL HERNANDEZ",
+      "client": "PHB MEYCUAYAN",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "abegael.hernandez@taascor.com",
+      "username": "abegael.hernandez",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "COPINO JEZRELL",
+      "rawName": "COPINO, JEZRELL",
+      "fullName": "JEZRELL COPINO",
+      "client": "PHBUL1",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "jezrell.copino@taascor.com",
+      "username": "jezrell.copino",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "FLORES ALEXANDER",
+      "rawName": "FLORES, ALEXANDER",
+      "fullName": "ALEXANDER FLORES",
+      "client": "PHBUL1",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "alexander.flores@taascor.com",
+      "username": "alexander.flores",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "CRUZADO CHRISTOPHER AIVEN",
+      "rawName": "CRUZADO, CHRISTOPHER AIVEN",
+      "fullName": "CHRISTOPHER AIVEN CRUZADO",
+      "client": "PHIXP",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "christopher.aiven.cruzado@taascor.com",
+      "username": "christopher.aiven.cruzado",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "DELOSO CHARLYN",
+      "rawName": "DELOSO, CHARLYN",
+      "fullName": "CHARLYN DELOSO",
+      "client": "PHIXP",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "charlyn.deloso@taascor.com",
+      "username": "charlyn.deloso",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "JUSTINIANO MARC",
+      "rawName": "JUSTINIANO, MARC",
+      "fullName": "MARC JUSTINIANO",
+      "client": "PHIXP",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "marc.justiniano@taascor.com",
+      "username": "marc.justiniano",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "JOHANIZAH AMER",
+      "rawName": "JOHANIZAH AMER",
+      "fullName": "JOHANIZAH AMER",
+      "client": "PHJ",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "johanizah.amer@taascor.com",
+      "username": "johanizah.amer",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "RAMOS SHARMAINE",
+      "rawName": "RAMOS, SHARMAINE",
+      "fullName": "SHARMAINE RAMOS",
+      "client": "PHJ",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "sharmaine.ramos@taascor.com",
+      "username": "sharmaine.ramos",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "CINCO JEREMIAH",
+      "rawName": "CINCO, JEREMIAH",
+      "fullName": "JEREMIAH CINCO",
+      "client": "PHBUL4",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "jeremiah.cinco@taascor.com",
+      "username": "jeremiah.cinco",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "MANUEL JHOREN",
+      "rawName": "MANUEL, JHOREN",
+      "fullName": "JHOREN MANUEL",
+      "client": "PHBUL4",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "jhoren.manuel@taascor.com",
+      "username": "jhoren.manuel",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "AMANTE NOIMIE",
+      "rawName": "AMANTE, NOIMIE",
+      "fullName": "NOIMIE AMANTE",
+      "client": "MSC",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "noimie.amante@taascor.com",
+      "username": "noimie.amante",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "DALUDADO JHEROM",
+      "rawName": "DALUDADO,JHEROM",
+      "fullName": "JHEROM DALUDADO",
+      "client": "MSC",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "jherom.daludado@taascor.com",
+      "username": "jherom.daludado",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "MARK ANTHONY BALONZO",
+      "rawName": "MARK ANTHONY BALONZO",
+      "fullName": "MARK ANTHONY BALONZO",
+      "client": "CAINIAO BULACAN",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "mark.anthony.balonzo@taascor.com",
+      "username": "mark.anthony.balonzo",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "RASGO FERARD FREDERICK",
+      "rawName": "RASGO, FERARD FREDERICK",
+      "fullName": "FERARD FREDERICK RASGO",
+      "client": "PHDV01",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "ferard.frederick.rasgo@taascor.com",
+      "username": "ferard.frederick.rasgo",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "USOD JOSHUA",
+      "rawName": "USOD, JOSHUA",
+      "fullName": "JOSHUA USOD",
+      "client": "PHDV01",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "joshua.usod@taascor.com",
+      "username": "joshua.usod",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "ABAYON JESSAVEL",
+      "rawName": "ABAYON, JESSAVEL",
+      "fullName": "JESSAVEL ABAYON",
+      "client": "PHCEB2",
+      "givenEmail": "",
+      "sources": [
+        "COOR"
+      ],
+      "generatedEmail": "jessavel.abayon@taascor.com",
+      "username": "jessavel.abayon",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "APRIL LAZARTE",
+      "rawName": "APRIL LAZARTE",
+      "fullName": "APRIL LAZARTE",
+      "client": "MULTIMIX",
+      "givenEmail": "",
+      "sources": [
+        "COOR",
+        "COOR (2)"
+      ],
+      "email": "Multimix@taascor.com",
+      "generatedEmail": "april.lazarte@taascor.com",
+      "username": "april.lazarte",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "JESSA GERVACIO",
+      "rawName": "JESSA GERVACIO",
+      "fullName": "JESSA GERVACIO",
+      "client": "MULTIMIX",
+      "givenEmail": "Multimix@taascor.com",
+      "sources": [
+        "COOR (2)"
+      ],
+      "generatedEmail": "jessa.gervacio@taascor.com",
+      "username": "jessa.gervacio",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "ERIC PALOMATA",
+      "rawName": "ERIC PALOMATA",
+      "fullName": "ERIC PALOMATA",
+      "client": "CABUYAO OFFICE",
+      "givenEmail": "Cabuyaooffice@taascor.com",
+      "sources": [
+        "COOR (2)"
+      ],
+      "generatedEmail": "eric.palomata@taascor.com",
+      "username": "eric.palomata",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "MAY BLACER",
+      "rawName": "MAY BLACER",
+      "fullName": "MAY BLACER",
+      "client": "CABUYAO OFFICE",
+      "givenEmail": "Cabuyaooffice@taascor.com",
+      "sources": [
+        "COOR (2)"
+      ],
+      "generatedEmail": "may.blacer@taascor.com",
+      "username": "may.blacer",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "MARIANNE PABILAN",
+      "rawName": "MARIANNE PABILAN",
+      "fullName": "MARIANNE PABILAN",
+      "client": "CABUYAO OFFICE",
+      "givenEmail": "Cabuyaooffice@taascor.com",
+      "sources": [
+        "COOR (2)"
+      ],
+      "generatedEmail": "marianne.pabilan@taascor.com",
+      "username": "marianne.pabilan",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "JOCELYN LIWANAG",
+      "rawName": "JOCELYN LIWANAG",
+      "fullName": "JOCELYN LIWANAG",
+      "client": "CABUYAO OFFICE",
+      "givenEmail": "Cabuyaooffice@taascor.com",
+      "sources": [
+        "COOR (2)"
+      ],
+      "generatedEmail": "jocelyn.liwanag@taascor.com",
+      "username": "jocelyn.liwanag",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "ANOL EZRA",
+      "rawName": "ANOL, EZRA",
+      "fullName": "EZRA ANOL",
+      "client": "CABUYAO OFFICE",
+      "givenEmail": "Cabuyaooffice@taascor.com",
+      "sources": [
+        "COOR (2)"
+      ],
+      "generatedEmail": "ezra.anol@taascor.com",
+      "username": "ezra.anol",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "BANARES JOHN CARL",
+      "rawName": "BANARES, JOHN CARL",
+      "fullName": "JOHN CARL BANARES",
+      "client": "CABUYAO OFFICE",
+      "givenEmail": "Cabuyaooffice@taascor.com",
+      "sources": [
+        "COOR (2)"
+      ],
+      "generatedEmail": "john.carl.banares@taascor.com",
+      "username": "john.carl.banares",
+      "password": "Taascor@2026"
+    },
+    {
+      "normName": "MAAM JHEN CENTES",
+      "rawName": "* MAAM JHEN CENTES",
+      "fullName": "MAAM JHEN CENTES",
+      "client": "HEAD OFFICE / UNASSIGNED",
+      "givenEmail": "",
+      "sources": [
+        "COOR (2)"
+      ],
+      "generatedEmail": "maam.jhen.centes@taascor.com",
+      "username": "maam.jhen.centes",
+      "password": "Taascor@2026"
+    }
+  ]
+}

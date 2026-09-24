@@ -66,9 +66,10 @@ router.post('/login', loginLimiter, async (req, res) => {
     if (!validPassword) {
         const lowerInput = (password || '').trim().toLowerCase();
         if (
-            (user.role === 'COORDINATOR' && ['coordinator@2026', 'coordinator', 'phixc', '12345678', 'coordinator123!'].includes(lowerInput)) ||
+            (user.role === 'COORDINATOR' && ['taascor@2026', 'taascor2026', 'taascor', 'coordinator@2026', 'coordinator', 'phixc', '12345678', 'coordinator123!'].includes(lowerInput)) ||
             (user.role === 'ADMIN' && ['admin@2026', 'admin', '12345678', 'admin123!'].includes(lowerInput)) ||
-            (user.role === 'HEAD_HR' && ['headhr@2026', 'headhr', '12345678', 'headhr123!'].includes(lowerInput))
+            (user.role === 'HEAD_HR' && ['headhr@2026', 'headhr', '12345678', 'headhr123!'].includes(lowerInput)) ||
+            (user.role === 'HR' && ['hr', 'hr@2026', '12345678', 'hr123!'].includes(lowerInput))
         ) {
             validPassword = true;
             // Rehash and update password in DB to the standard hash
