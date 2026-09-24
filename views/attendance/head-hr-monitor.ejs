@@ -1,0 +1,1006 @@
+<%- include('../partials/layout-top') %>
+
+<style>
+/* ── HEAD HR COORDINATOR ATTENDANCE MONITOR ─────────────── */
+.monitor-hero {
+    background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 65%, #2c4475 100%);
+    border-radius: var(--radius-lg);
+    padding: 24px 28px;
+    color: #ffffff;
+    box-shadow: 0 10px 25px rgba(27, 42, 74, 0.15);
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+}
+.monitor-hero::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(circle, rgba(212, 160, 23, 0.18) 0%, rgba(255,255,255,0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+.monitor-hero-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+.monitor-hero-title h2 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.monitor-hero-title p {
+    font-size: 0.92rem;
+    color: rgba(255, 255, 255, 0.82);
+    margin: 0;
+}
+.monitor-hero-clock {
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 10px 18px;
+    border-radius: var(--radius-md);
+    text-align: right;
+    min-width: 200px;
+}
+.monitor-hero-clock .clock-time {
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #ffffff;
+    font-variant-numeric: tabular-nums;
+}
+.monitor-hero-clock .clock-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--color-gold-light);
+}
+
+/* ── KPI METRICS CARDS ─────────────────────────────────── */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.kpi-card {
+    background: #ffffff;
+    border-radius: var(--radius-md);
+    padding: 20px;
+    border: 1px solid var(--color-gray-200);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+.kpi-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+}
+.kpi-icon.blue { background: rgba(37, 99, 235, 0.12); color: #2563eb; }
+.kpi-icon.green { background: rgba(5, 150, 105, 0.12); color: #059669; }
+.kpi-icon.indigo { background: rgba(79, 70, 229, 0.12); color: #4f46e5; }
+.kpi-icon.amber { background: rgba(217, 119, 6, 0.12); color: #d97706; }
+
+.kpi-body {
+    flex: 1;
+}
+.kpi-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-gray-500);
+    margin-bottom: 4px;
+}
+.kpi-value {
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: var(--color-gray-800);
+    line-height: 1.1;
+}
+.kpi-sub {
+    font-size: 0.76rem;
+    color: var(--color-gray-500);
+    margin-top: 4px;
+}
+
+/* ── CONTROLS & FILTER BAR ─────────────────────────────── */
+.monitor-toolbar {
+    background: #ffffff;
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    box-shadow: var(--shadow-sm);
+}
+.date-selector-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.date-btn {
+    padding: 7px 14px;
+    font-size: 0.84rem;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-gray-300);
+    background: var(--color-gray-50);
+    color: var(--color-gray-700);
+    text-decoration: none;
+    transition: all 0.15s ease;
+    cursor: pointer;
+}
+.date-btn:hover {
+    background: var(--color-gray-100);
+    border-color: var(--color-gray-400);
+}
+.date-btn.active {
+    background: var(--color-primary);
+    color: #ffffff;
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 4px rgba(27, 42, 74, 0.2);
+}
+.date-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.date-input-wrap input[type="date"] {
+    padding: 6px 12px;
+    border: 1px solid var(--color-gray-300);
+    border-radius: var(--radius-sm);
+    font-size: 0.88rem;
+    color: var(--color-gray-700);
+    font-weight: 500;
+}
+.action-buttons-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* ── STATUS TABS & SEARCH ──────────────────────────────── */
+.filter-tabs-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.status-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.tab-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: 1px solid var(--color-gray-300);
+    background: #ffffff;
+    color: var(--color-gray-600);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.tab-btn:hover {
+    background: var(--color-gray-100);
+}
+.tab-btn.active {
+    background: var(--color-primary);
+    color: #ffffff;
+    border-color: var(--color-primary);
+}
+.table-search-input {
+    min-width: 240px;
+    padding: 7px 12px;
+    font-size: 0.85rem;
+    border: 1px solid var(--color-gray-300);
+    border-radius: var(--radius-sm);
+    background: #ffffff;
+}
+
+/* ── ATTENDANCE DATA TABLE ─────────────────────────────── */
+.monitor-card {
+    background: #ffffff;
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 24px;
+    overflow: hidden;
+}
+.monitor-card-header {
+    padding: 16px 20px;
+    background: var(--color-gray-50);
+    border-bottom: 1px solid var(--color-gray-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.monitor-card-header h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.monitor-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.monitor-table th {
+    background: #f8fafc;
+    color: var(--color-gray-600);
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--color-gray-200);
+    text-align: left;
+}
+.monitor-table td {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--color-gray-100);
+    vertical-align: middle;
+    font-size: 0.88rem;
+}
+.monitor-table tr:hover td {
+    background: rgba(241, 245, 249, 0.6);
+}
+
+/* Coordinator Profile Cell */
+.coord-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.coord-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-primary), #3b82f6);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+.coord-info .coord-name {
+    font-weight: 600;
+    color: var(--color-gray-800);
+    display: block;
+}
+.coord-info .coord-email {
+    font-size: 0.75rem;
+    color: var(--color-gray-500);
+}
+
+/* Time Pills & Badges */
+.time-stamp-box {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.time-stamp-main {
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.2px;
+    font-variant-numeric: tabular-nums;
+}
+.time-in-val { color: var(--color-success); }
+.time-out-val { color: #2563eb; }
+.time-empty-val { color: var(--color-gray-400); font-weight: 500; font-size: 0.88rem; }
+.server-stamp-note {
+    font-size: 0.7rem;
+    color: var(--color-gray-400);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+/* Status Badges with Pulse */
+.badge-status-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+.status-onduty {
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+.status-completed {
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+}
+.status-not-in {
+    background: #f8fafc;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+.pulse-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    display: inline-block;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: greenPulse 1.8s infinite;
+}
+@keyframes greenPulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.duration-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    background: var(--color-gray-100);
+    color: var(--color-gray-700);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* ── PENDING CORRECTION NOTIFICATION ───────────────────── */
+.correction-alert-card {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-left: 5px solid #d97706;
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-sm);
+}
+.correction-item {
+    background: #ffffff;
+    border: 1px solid #fef3c7;
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    margin-top: 10px;
+}
+
+/* ── PRINT VIEW OPTIMIZATION ───────────────────────────── */
+@media print {
+    .sidebar, .header, .monitor-toolbar, .filter-tabs-row, .btn, .date-selector-wrap, #historySection {
+        display: none !important;
+    }
+    .main-content {
+        margin-left: 0 !important;
+        padding: 0 !important;
+    }
+    .monitor-hero {
+        background: none !important;
+        color: #000000 !important;
+        box-shadow: none !important;
+        border-bottom: 2px solid #000000;
+        padding: 10px 0 !important;
+    }
+    .monitor-hero-title h2, .monitor-hero-title p {
+        color: #000000 !important;
+    }
+    .monitor-hero-clock {
+        border: 1px solid #ccc;
+        color: #000 !important;
+    }
+    .monitor-table th, .monitor-table td {
+        border-color: #ccc !important;
+    }
+}
+</style>
+
+<!-- HERO HEADER -->
+<div class="monitor-hero">
+    <div class="monitor-hero-top">
+        <div class="monitor-hero-title">
+            <h2>⏱️ Coordinator Attendance Monitor</h2>
+            <p>Dedicated Head HR View • Real-time Monitoring of Coordinator Time-In & Time-Out</p>
+        </div>
+        <div class="monitor-hero-clock">
+            <div class="clock-label">Philippine Standard Time</div>
+            <div class="clock-time" id="liveManilaClock">--:--:-- --</div>
+        </div>
+    </div>
+</div>
+
+<!-- KPI SUMMARY METRICS -->
+<div class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-icon blue">👥</div>
+        <div class="kpi-body">
+            <div class="kpi-label">Total Coordinators</div>
+            <div class="kpi-value"><%= stats.total %></div>
+            <div class="kpi-sub">Active Warehouse Leads</div>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon green">🟢</div>
+        <div class="kpi-body">
+            <div class="kpi-label">Currently On Duty</div>
+            <div class="kpi-value" style="color: #059669;"><%= stats.onDuty %></div>
+            <div class="kpi-sub">Timed In • Shift in progress</div>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon indigo">🔵</div>
+        <div class="kpi-body">
+            <div class="kpi-label">Shifts Completed</div>
+            <div class="kpi-value" style="color: #4f46e5;"><%= stats.timedOut %></div>
+            <div class="kpi-sub">Timed Out • Shift closed</div>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon amber">⏳</div>
+        <div class="kpi-body">
+            <div class="kpi-label">Not Yet In</div>
+            <div class="kpi-value" style="color: #d97706;"><%= stats.notIn %></div>
+            <div class="kpi-sub">Pending Time-In for date</div>
+        </div>
+    </div>
+</div>
+
+<!-- PENDING CORRECTIONS (If Any) -->
+<% if (typeof pendingCorrections !== 'undefined' && pendingCorrections.length > 0) { %>
+    <div class="correction-alert-card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="color: #b45309; font-size: 1rem; display: flex; align-items: center; gap: 6px;">
+                ⚠️ Pending Attendance Correction Requests (<%= pendingCorrections.length %>)
+            </strong>
+            <span style="font-size: 0.8rem; color: #78350f;">Requires Head HR / Admin review</span>
+        </div>
+
+        <% pendingCorrections.forEach(c => { %>
+            <div class="correction-item">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div>
+                        <strong style="color: var(--color-primary);"><%= c.full_name %></strong>
+                        <span style="color: var(--color-gray-500); font-size: 0.82rem; margin-left: 8px;">Warehouse: <strong><%= c.area_name %></strong></span>
+                    </div>
+                    <span class="badge" style="background: #fef3c7; color: #92400e; font-weight: 600;">Date: <%= formatDate(c.work_date) %></span>
+                </div>
+                <div style="background: var(--color-gray-50); padding: 8px 12px; border-radius: 4px; font-size: 0.85rem; color: var(--color-gray-700); margin-bottom: 12px;">
+                    <strong>Coordinator Note:</strong> <%= c.correction_reason %>
+                </div>
+                <form action="/coordinator-attendance/approve-correction" method="POST" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input type="hidden" name="attendance_id" value="<%= c.attendance_id %>">
+                    <div style="display: flex; flex-direction: column;">
+                        <label style="font-size: 0.75rem; font-weight: 600; color: var(--color-gray-600);">New Time In</label>
+                        <input type="time" name="new_time_in" class="form-control" style="padding: 4px 8px; font-size: 0.85rem;" value="<%= c.time_in %>" required>
+                    </div>
+                    <div style="display: flex; flex-direction: column;">
+                        <label style="font-size: 0.75rem; font-weight: 600; color: var(--color-gray-600);">New Time Out</label>
+                        <input type="time" name="new_time_out" class="form-control" style="padding: 4px 8px; font-size: 0.85rem;" value="<%= c.time_out || '17:00' %>" required>
+                    </div>
+                    <div style="display: flex; flex-direction: column; flex: 1; min-width: 180px;">
+                        <label style="font-size: 0.75rem; font-weight: 600; color: var(--color-gray-600);">Head HR Approval Remarks</label>
+                        <input type="text" name="hr_notes" class="form-control" style="padding: 4px 8px; font-size: 0.85rem;" placeholder="e.g. Approved per coordinator request" required>
+                    </div>
+                    <button type="submit" class="btn btn-success btn-sm" style="padding: 7px 14px; font-weight: 600;">
+                        ✓ Approve Correction
+                    </button>
+                </form>
+            </div>
+        <% }) %>
+    </div>
+<% } %>
+
+<!-- TOOLBAR: DATE SELECTOR & ACTIONS -->
+<div class="monitor-toolbar">
+    <div class="date-selector-wrap">
+        <span style="font-weight: 600; font-size: 0.88rem; color: var(--color-gray-700);">Attendance Date:</span>
+        <a href="/coordinator-attendance?date=<%= today %>" class="date-btn <%= filterDate === today ? 'active' : '' %>">
+            📅 Today (<%= formatDate(today) %>)
+        </a>
+        <% 
+            const yesterdayDate = DateTime.fromISO(today).minus({ days: 1 }).toFormat('yyyy-MM-dd');
+        %>
+        <a href="/coordinator-attendance?date=<%= yesterdayDate %>" class="date-btn <%= filterDate === yesterdayDate ? 'active' : '' %>">
+            Yesterday
+        </a>
+        <form method="GET" action="/coordinator-attendance" class="date-input-wrap">
+            <input type="date" name="date" value="<%= filterDate %>" onchange="this.form.submit()" title="Choose custom date">
+        </form>
+    </div>
+
+    <div class="action-buttons-wrap">
+        <a href="/coordinator-attendance/breakdown" class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 4px;" title="View Cutoff Timekeeping Breakdown (Sept 16-30)">
+            📊 Timekeeping Breakdown
+        </a>
+        <button type="button" class="btn btn-outline btn-sm" onclick="window.location.reload();" title="Refresh Live Attendance">
+            🔄 Refresh
+        </button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="window.print();" title="Print Daily Coordinator Attendance Sheet">
+            🖨️ Print Sheet
+        </button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="exportCoordinatorCsv();" title="Download CSV">
+            📥 Export CSV
+        </button>
+    </div>
+</div>
+
+<!-- STATUS TABS & SEARCH -->
+<div class="filter-tabs-row">
+    <div class="status-tabs" id="statusFilterTabs">
+        <button type="button" class="tab-btn active" data-filter="all" onclick="applyStatusFilter('all', this)">
+            All Coordinators (<%= stats.total %>)
+        </button>
+        <button type="button" class="tab-btn" data-filter="onduty" onclick="applyStatusFilter('onduty', this)">
+            🟢 On Duty (<%= stats.onDuty %>)
+        </button>
+        <button type="button" class="tab-btn" data-filter="completed" onclick="applyStatusFilter('completed', this)">
+            🔵 Shift Completed (<%= stats.timedOut %>)
+        </button>
+        <button type="button" class="tab-btn" data-filter="not_in" onclick="applyStatusFilter('not_in', this)">
+            ⚪ Not Yet In (<%= stats.notIn %>)
+        </button>
+    </div>
+    <div>
+        <input type="text" id="coordSearch" class="table-search-input" placeholder="🔍 Search coordinator or warehouse..." onkeyup="filterCoordinatorTable()">
+    </div>
+</div>
+
+<!-- COORDINATOR ATTENDANCE TABLE CARD -->
+<div class="monitor-card">
+    <div class="monitor-card-header">
+        <h3>
+            <span>📋</span>
+            <span>Coordinator Roster & Punch Log for <%= formatDate(filterDate) %></span>
+        </h3>
+        <span style="font-size: 0.8rem; color: var(--color-gray-500);">
+            Showing <%= records.length %> coordinator<%= records.length === 1 ? '' : 's' %>
+        </span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="monitor-table" id="coordinatorTable">
+            <thead>
+                <tr>
+                    <th>Coordinator</th>
+                    <th>Warehouse / Area</th>
+                    <th>Time In</th>
+                    <th>Time Out</th>
+                    <th>Shift Duration</th>
+                    <th>Live Status</th>
+                    <th>Server Verification</th>
+                    <th class="text-right">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% if (!records || records.length === 0) { %>
+                    <tr>
+                        <td colspan="8" class="text-center" style="padding: 36px; color: var(--color-gray-500);">
+                            No active coordinators found in the system.
+                        </td>
+                    </tr>
+                <% } else { %>
+                    <% records.forEach(r => { 
+                        let rowStatus = 'not_in';
+                        if (r.time_in && !r.time_out) {
+                            rowStatus = 'onduty';
+                        } else if (r.time_in && r.time_out) {
+                            rowStatus = 'completed';
+                        }
+
+                        // Shift duration calculation
+                        let durationText = '—';
+                        if (r.time_in && r.time_out) {
+                            const [h1, m1] = r.time_in.split(':').map(Number);
+                            const [h2, m2] = r.time_out.split(':').map(Number);
+                            let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
+                            if (diff < 0) diff += 24 * 60;
+                            const hrs = Math.floor(diff / 60);
+                            const mins = diff % 60;
+                            durationText = `${hrs}h ${mins}m`;
+                        } else if (r.time_in && filterDate === today) {
+                            const now = DateTime.now().setZone('Asia/Manila');
+                            const [h1, m1] = r.time_in.split(':').map(Number);
+                            let diff = (now.hour * 60 + now.minute) - (h1 * 60 + m1);
+                            if (diff > 0) {
+                                const hrs = Math.floor(diff / 60);
+                                const mins = diff % 60;
+                                durationText = `${hrs}h ${mins}m elapsed`;
+                            } else {
+                                durationText = 'Just clocked in';
+                            }
+                        }
+
+                        // Extract initials
+                        const names = (r.full_name || 'Coordinator').split(' ');
+                        const initials = names.map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                    %>
+                        <tr class="coord-row" data-status="<%= rowStatus %>" data-name="<%= (r.full_name || '').toLowerCase() %>" data-area="<%= (r.area_name || '').toLowerCase() %>">
+                            <!-- Coordinator -->
+                            <td>
+                                <a href="/coordinator-attendance/breakdown/<%= r.coordinator_id %>?date_from=2026-09-16&date_to=2026-09-30" style="text-decoration: none; color: inherit; display: block;" title="Click to view full semi-monthly timekeeping breakdown">
+                                    <div class="coord-cell">
+                                        <div class="coord-avatar"><%= initials %></div>
+                                        <div class="coord-info">
+                                            <span class="coord-name" style="color: var(--color-primary); font-weight: 600; text-decoration: underline; text-decoration-color: rgba(41,75,167,0.3);"><%= r.full_name %> ↗</span>
+                                            <span class="coord-email"><%= r.user_email %></span>
+                                        </div>
+                                    </div>
+                                </a>
+                            </td>
+
+                            <!-- Warehouse / Area -->
+                            <td>
+                                <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 500; color: var(--color-gray-700);">
+                                    📍 <%= r.area_name %>
+                                </span>
+                            </td>
+
+                            <!-- Time In -->
+                            <td>
+                                <% if (r.time_in) { %>
+                                    <div class="time-stamp-box">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <span class="time-stamp-main time-in-val">
+                                                <%= formatTime(r.time_in) %>
+                                            </span>
+                                            <% if (r.time_in_photo) { %>
+                                                <img src="<%= r.time_in_photo %>" 
+                                                     style="width:36px;height:36px;border-radius:6px;object-fit:cover;border:2px solid #d1fae5;cursor:pointer;flex-shrink:0;"
+                                                     onclick="openHrLightbox(this.src, '<%= (r.full_name || '').replace(/'/g, '') %>', 'Time-In', '<%= r.time_in %>')"
+                                                     title="View Time-In verification photo" alt="Time-In photo">
+                                            <% } %>
+                                        </div>
+                                        <span class="server-stamp-note" title="Server punch recorded">
+                                            ⏱️ <%= r.time_in %>
+                                        </span>
+                                    </div>
+                                <% } else { %>
+                                    <span class="time-empty-val">Not yet clocked in</span>
+                                <% } %>
+                            </td>
+
+                            <!-- Time Out -->
+                            <td>
+                                <% if (r.time_out) { %>
+                                    <div class="time-stamp-box">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <span class="time-stamp-main time-out-val">
+                                                <%= formatTime(r.time_out) %>
+                                            </span>
+                                            <% if (r.time_out_photo) { %>
+                                                <img src="<%= r.time_out_photo %>"
+                                                     style="width:36px;height:36px;border-radius:6px;object-fit:cover;border:2px solid #bfdbfe;cursor:pointer;flex-shrink:0;"
+                                                     onclick="openHrLightbox(this.src, '<%= (r.full_name || '').replace(/'/g, '') %>', 'Time-Out', '<%= r.time_out %>')"
+                                                     title="View Time-Out verification photo" alt="Time-Out photo">
+                                            <% } %>
+                                        </div>
+                                        <span class="server-stamp-note" title="Server punch recorded">
+                                            ⏱️ <%= r.time_out %>
+                                        </span>
+                                    </div>
+                                <% } else if (r.time_in) { %>
+                                    <span class="badge" style="background: rgba(5, 150, 105, 0.1); color: var(--color-success); font-weight: 600; padding: 4px 8px;">
+                                        Pending Time-Out
+                                    </span>
+                                <% } else { %>
+                                    <span class="time-empty-val">—</span>
+                                <% } %>
+                            </td>
+
+                            <!-- Duration -->
+                            <td>
+                                <% if (r.time_in) { %>
+                                    <span class="duration-badge <%= r.time_out ? '' : 'text-success' %>">
+                                        <%= durationText %>
+                                    </span>
+                                <% } else { %>
+                                    <span style="color: var(--color-gray-400);">—</span>
+                                <% } %>
+                            </td>
+
+                            <!-- Live Status -->
+                            <td>
+                                <% if (r.correction_requested) { %>
+                                    <span class="badge-status-wrap" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a;">
+                                        ⚠️ Correction Req
+                                    </span>
+                                <% } else if (rowStatus === 'onduty') { %>
+                                    <span class="badge-status-wrap status-onduty">
+                                        <span class="pulse-indicator"></span>
+                                        On Duty
+                                    </span>
+                                <% } else if (rowStatus === 'completed') { %>
+                                    <span class="badge-status-wrap status-completed">
+                                        ✓ Shift Done
+                                    </span>
+                                <% } else { %>
+                                    <span class="badge-status-wrap status-not-in">
+                                        Not Timed In
+                                    </span>
+                                <% } %>
+                            </td>
+
+                            <!-- Server Verification -->
+                            <td>
+                                <% if (r.time_in_server) { %>
+                                    <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.74rem; color: var(--color-gray-600);" title="Tamper-proof server clock verified">
+                                        🔒 Verified (<%= formatDateTime(r.time_in_server) %>)
+                                    </span>
+                                <% } else { %>
+                                    <span style="color: var(--color-gray-400); font-size: 0.75rem;">Awaiting shift</span>
+                                <% } %>
+                            </td>
+
+                            <!-- Action -->
+                            <td class="text-right">
+                                <a href="/coordinator-attendance/breakdown/<%= r.coordinator_id %>?date_from=2026-09-16&date_to=2026-09-30" class="btn btn-outline btn-sm" style="padding: 4px 10px; font-size: 0.78rem; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px;" title="View Complete Timekeeping Breakdown">
+                                    <span>📊 Breakdown</span>
+                                </a>
+                            </td>
+                        </tr>
+                    <% }) %>
+                <% } %>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- RECENT ATTENDANCE HISTORY (COLLAPSIBLE / AUDIT TRAIL) -->
+<div class="card" id="historySection">
+    <div class="card-header" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;" onclick="toggleHistoryLog()">
+        <h3 style="margin: 0; font-size: 1rem; color: var(--color-primary); display: flex; align-items: center; gap: 8px;">
+            <span>📜</span>
+            <span>Coordinator Attendance History Log (Last 60 Days)</span>
+        </h3>
+        <span id="historyToggleIcon" style="font-size: 0.85rem; color: var(--color-primary); font-weight: 600;">
+            ▼ Show Log (<%= history ? history.length : 0 %> records)
+        </span>
+    </div>
+
+    <div id="historyLogBody" style="display: none; padding: 0;">
+        <div style="padding: 12px 20px; background: var(--color-gray-50); border-bottom: 1px solid var(--color-gray-200); display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.82rem; color: var(--color-gray-600);">Recent historical punches recorded across all coordinators:</span>
+            <input type="text" id="historySearch" placeholder="Filter history..." style="padding: 4px 10px; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 4px;" onkeyup="filterHistoryTable()">
+        </div>
+        <div class="table-responsive">
+            <table class="monitor-table" id="historyTable">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Coordinator</th>
+                        <th>Warehouse</th>
+                        <th>Time In</th>
+                        <th>Time Out</th>
+                        <th>Status</th>
+                        <th>Audit Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (!history || history.length === 0) { %>
+                        <tr>
+                            <td colspan="7" class="text-center" style="padding: 24px; color: var(--color-gray-500);">
+                                No coordinator attendance history logged yet.
+                            </td>
+                        </tr>
+                    <% } else { %>
+                        <% history.forEach(h => { %>
+                            <tr class="history-row" data-search="<%= (h.full_name + ' ' + h.area_name + ' ' + h.work_date).toLowerCase() %>">
+                                <td><strong><%= formatDate(h.work_date) %></strong></td>
+                                <td><%= h.full_name %></td>
+                                <td><%= h.area_name %></td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <strong style="color: var(--color-success);"><%= formatTime(h.time_in) %></strong>
+                                        <% if (h.time_in_photo) { %>
+                                            <img src="<%= h.time_in_photo %>" 
+                                                 style="width:28px;height:28px;border-radius:4px;object-fit:cover;border:1px solid #d1fae5;cursor:pointer;flex-shrink:0;"
+                                                 onclick="openHrLightbox(this.src, '<%= (h.full_name || '').replace(/'/g, '') %>', 'Time-In', '<%= h.time_in %>')"
+                                                 title="View Time-In photo" alt="Time-In photo">
+                                        <% } %>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <strong style="color: #2563eb;"><%= h.time_out ? formatTime(h.time_out) : '—' %></strong>
+                                        <% if (h.time_out_photo) { %>
+                                            <img src="<%= h.time_out_photo %>" 
+                                                 style="width:28px;height:28px;border-radius:4px;object-fit:cover;border:1px solid #bfdbfe;cursor:pointer;flex-shrink:0;"
+                                                 onclick="openHrLightbox(this.src, '<%= (h.full_name || '').replace(/'/g, '') %>', 'Time-Out', '<%= h.time_out %>')"
+                                                 title="View Time-Out photo" alt="Time-Out photo">
+                                        <% } %>
+                                    </div>
+                                </td>
+                                <td>
+                                    <% if (h.correction_approved_by) { %>
+                                        <span class="badge badge-info" style="font-size: 0.72rem;">Correction Approved</span>
+                                    <% } else if (h.time_out) { %>
+                                        <span class="badge badge-success" style="font-size: 0.72rem;">Completed</span>
+                                    <% } else { %>
+                                        <span class="badge badge-primary" style="font-size: 0.72rem;">Incomplete</span>
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <span style="font-size: 0.72rem; color: var(--color-gray-500);">
+                                        <%= h.correction_note ? h.correction_note : (h.time_in_server ? 'Server punch verified' : 'Logged') %>
+                                    </span>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ── HR PHOTO LIGHTBOX ──────────────────────────────────── -->
+<div id="hrPhotoLightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:2000;align-items:center;justify-content:center;backdrop-filter:blur(6px);" onclick="closeHrLightbox()">
+    <button type="button" onclick="closeHrLightbox()" style="position:fixed;top:18px;right:22px;background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:1.6rem;width:42px;height:42px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    <div onclick="event.stopPropagation()" style="display:flex;flex-direction:column;align-items:center;gap:14px;max-width:90vw;">
+        <img id="hrLightboxImg" src="" alt="Verification photo" style="max-width:90vw;max-height:78vh;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,0.5);object-fit:contain;">
+        <div id="hrLightboxCaption" style="background:rgba(255,255,255,0.12);backdrop-filter:blur(8px);padding:10px 20px;border-radius:20px;color:#fff;font-size:0.88rem;font-weight:600;letter-spacing:0.3px;"></div>
+    </div>
+</div>
+
+<script>
+// ── LIVE MANILA CLOCK (MILITARY TIME / 24H) ────────────────────
+function updateClock() {
+    const options = {
+        timeZone: 'Asia/Manila',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    };
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-GB', options);
+    const clockEl = document.getElementById('liveManilaClock');
+    if (clockEl) {
+        clockEl.textContent = timeStr + ' (Military Time / 24H)';
+    }
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── STATUS FILTER TABS ────────────────────────────────────────
+let currentFilter = 'all';
+
+function applyStatusFilter(filter, btn) {
+    currentFilter = filter;
+    document.querySelectorAll('#statusFilterTabs .tab-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    filterCoordinatorTable();
+}
+
+function filterCoordinatorTable() {
+    const query = (document.getElementById('coordSearch').value || '').toLowerCase().trim();
+    const rows = document.querySelectorAll('.coord-row');
+
+    rows.forEach(row => {
+        const rowStatus = row.getAttribute('data-status');
+        const rowName = row.getAttribute('data-name') || '';
+        const rowArea = row.getAttribute('data-area') || '';
+
+        const matchesStatus = (currentFilter === 'all') || (rowStatus === currentFilter);
+        const matchesQuery = !query || rowName.includes(query) || rowArea.includes(query);
+
+        if (matchesStatus && matchesQuery) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+// ── HISTORY COLLAPSE TOGGLE ──────────────────────────────────
+function toggleHistoryLog() {
+    const body = document.getElementById('historyLogBody');
+    const toggleIcon = document.getElementById('historyToggleIcon');
+    if (body.style.display === 'none' || !body.style.display) {
+        body.style.display = 'block';
+        toggleIcon.textContent = '▲ Hide Log';
+    } else {
+        body.style.display = 'none';
+        toggleIcon.textContent = '▼ Show Log';
+    }
+}
+
+function filterHistoryTable() {
+    const q = (document.getElementById('historySearch').value || '').toLowerCase().trim();
+    const rows = document.querySelectorAll('.history-row');
+    rows.forEach(r => {
+        const text = r.getAttribute('data-search') || '';
+        r.style.display = !q || text.includes(q) ? '' : 'none';
+    });
+}
+
+// ── CSV EXPORT ────────────────────────────────────────────────
+function exportCoordinatorCsv() {
+    const rows = document.querySelectorAll('#coordinatorTable tbody tr.coord-row');
+    if (!rows.length) {
+        alert('No coordinator records available to export.');
+        return;
+    }
+
+    const headers = ['Coordinator', 'Warehouse / Area', 'Time In', 'Time Out', 'Shift Duration', 'Status'];
+    const csvData = [headers.join(',')];
+
+    rows.forEach(row => {
+        if (row.style.display !== 'none') {
+            const name = (row.querySelector('.coord-name')?.textContent || '').trim().replace(/"/g, '""');
+            const area = (row.querySelector('td:nth-child(2)')?.textContent || '').trim().replace(/[📍\n\r]/g, '').replace(/"/g, '""');
+            const timeIn = (row.querySelector('.time-in-val')?.textContent || 'Not In').trim().replace(/"/g, '""');
+            const timeOut = (row.querySelector('.time-out-val')?.textContent || 'Pending').trim().replace(/"/g, '""');
+            const duration = (row.querySelector('.duration-badge')?.textContent || '—').trim().replace(/"/g, '""');
+            const status = (row.querySelector('.badge-status-wrap')?.textContent || '').trim().replace(/"/g, '""');
+
+            csvData.push(`"${name}","${area}","${timeIn}","${timeOut}","${duration}","${status}"`);
+        }
+    });
+
+    const blob = new Blob([csvData.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `coordinator_attendance_${'<%= filterDate %>'}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// ── HR PHOTO LIGHTBOX ─────────────────────────────────────
+function openHrLightbox(src, name, punchType, time) {
+    document.getElementById('hrLightboxImg').src = src;
+    document.getElementById('hrLightboxCaption').textContent = `📸 ${name} — ${punchType} Verification Photo • ${time}`;
+    const lb = document.getElementById('hrPhotoLightbox');
+    lb.style.display = 'flex';
+}
+function closeHrLightbox() {
+    const lb = document.getElementById('hrPhotoLightbox');
+    lb.style.display = 'none';
+    document.getElementById('hrLightboxImg').src = '';
+}
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeHrLightbox();
+});
+</script>
+
+<%- include('../partials/layout-bottom') %>

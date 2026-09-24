@@ -1,98 +1,213 @@
+<%
+    const glow = (typeof menuGlow !== 'undefined' && menuGlow) ? menuGlow : {};
+    function isGlowing(path) {
+        return glow[path] && Number(glow[path]) > 0;
+    }
+    function glowCount(path) {
+        return Number(glow[path]) || 0;
+    }
+%>
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
-        <div class="sidebar-logo-container">
-            <img src="/images/taascor-logo.png" alt="TAASCOR Management & General Services Corp.">
-        </div>
-        <div class="logo-subtext">Attendance Monitoring System</div>
+        <a class="sidebar-brand" href="/dashboard" aria-label="TAASCOR ETS dashboard">
+            <img src="/images/taascor-official-logo.png" width="80" height="72" decoding="async" alt="">
+            <span>TAASCOR ETS</span>
+        </a>
+        <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-label="Collapse sidebar" aria-expanded="true" aria-controls="sidebar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 6h14 M5 12h14 M5 18h14"/></svg>
+        </button>
     </div>
 
     <nav class="sidebar-nav">
         <div class="nav-section">
-            <a href="/dashboard" class="nav-item <%= currentPath === '/dashboard' ? 'active' : '' %>">
-                <span class="nav-icon">📊</span>
+            <a href="/dashboard" class="nav-item <%= currentPath === '/dashboard' ? 'active' : '' %> <%= isGlowing('/dashboard') ? 'nav-item-glowing' : '' %>" data-glow-path="/dashboard">
+                <span class="nav-icon"><%- include('outline-icon', {icon:'dashboard'}) %></span>
                 <span>Dashboard</span>
+                <% if (isGlowing('/dashboard')) { %>
+                    <span class="nav-glow-badge" title="<%= glowCount('/dashboard') %> new alert(s)">
+                        <span class="nav-glow-dot"></span>
+                        <span class="nav-glow-count"><%= glowCount('/dashboard') %></span>
+                    </span>
+                <% } %>
             </a>
             
-            <a href="/employees" class="nav-item <%= currentPath.startsWith('/employees') ? 'active' : '' %>">
-                <span class="nav-icon">👥</span>
-                <span>Employees</span>
+            <a href="/employees" class="nav-item <%= currentPath.startsWith('/employees') ? 'active' : '' %> <%= isGlowing('/employees') ? 'nav-item-glowing' : '' %>" data-glow-path="/employees">
+                <span class="nav-icon"><%- include('outline-icon', {icon:'people'}) %></span>
+                <span><%= user.role === 'ADMIN' ? 'Deployed Workers' : 'Employees' %></span>
+                <% if (isGlowing('/employees')) { %>
+                    <span class="nav-glow-badge" title="<%= glowCount('/employees') %> notification(s)">
+                        <span class="nav-glow-dot"></span>
+                        <span class="nav-glow-count"><%= glowCount('/employees') %></span>
+                    </span>
+                <% } %>
             </a>
 
-            <a href="/departments" class="nav-item <%= currentPath.startsWith('/departments') ? 'active' : '' %>">
-                <span class="nav-icon">🏢</span>
+            <a href="/departments" class="nav-item <%= currentPath.startsWith('/departments') ? 'active' : '' %> <%= isGlowing('/departments') ? 'nav-item-glowing' : '' %>" data-glow-path="/departments">
+                <span class="nav-icon"><%- include('outline-icon', {icon:'building'}) %></span>
                 <span>Departments</span>
+                <% if (isGlowing('/departments')) { %>
+                    <span class="nav-glow-badge" title="<%= glowCount('/departments') %> notification(s)">
+                        <span class="nav-glow-dot"></span>
+                        <span class="nav-glow-count"><%= glowCount('/departments') %></span>
+                    </span>
+                <% } %>
             </a>
 
-            <a href="/attendance" class="nav-item <%= currentPath === '/attendance' ? 'active' : '' %>">
-                <span class="nav-icon">📋</span>
+            <a href="/attendance" class="nav-item <%= currentPath === '/attendance' ? 'active' : '' %> <%= isGlowing('/attendance') ? 'nav-item-glowing' : '' %>" data-glow-path="/attendance">
+                <span class="nav-icon"><%- include('outline-icon', {icon:'calendar'}) %></span>
                 <span>Attendance</span>
+                <% if (isGlowing('/attendance')) { %>
+                    <span class="nav-glow-badge" title="<%= glowCount('/attendance') %> notification(s)">
+                        <span class="nav-glow-dot"></span>
+                        <span class="nav-glow-count"><%= glowCount('/attendance') %></span>
+                    </span>
+                <% } %>
             </a>
 
-            <a href="/schedules" class="nav-item <%= currentPath.startsWith('/schedules') ? 'active' : '' %>">
-                <span class="nav-icon">📅</span>
+            <a href="/schedules" class="nav-item <%= currentPath.startsWith('/schedules') ? 'active' : '' %> <%= isGlowing('/schedules') ? 'nav-item-glowing' : '' %>" data-glow-path="/schedules">
+                <span class="nav-icon"><%- include('outline-icon', {icon:'calendar'}) %></span>
                 <span>Schedules</span>
+                <% if (isGlowing('/schedules')) { %>
+                    <span class="nav-glow-badge" title="<%= glowCount('/schedules') %> notification(s)">
+                        <span class="nav-glow-dot"></span>
+                        <span class="nav-glow-count"><%= glowCount('/schedules') %></span>
+                    </span>
+                <% } %>
             </a>
         </div>
 
         <div class="nav-section-label">Operations</div>
         <div class="nav-section">
-            <% if (user && user.role === 'COORDINATOR') { %>
-                <a href="/coordinator-attendance" class="nav-item <%= currentPath.startsWith('/coordinator-attendance') ? 'active' : '' %>">
-                    <span class="nav-icon">⏱️</span>
+            <% if (user && user.role === 'HEAD_HR') { %>
+                <a href="/coordinator-attendance" class="nav-item <%= currentPath.startsWith('/coordinator-attendance') ? 'active' : '' %> <%= isGlowing('/coordinator-attendance') ? 'nav-item-glowing' : '' %>" data-glow-path="/coordinator-attendance">
+                    <span class="nav-icon"><%- include('outline-icon', {icon:'clock'}) %></span>
+                    <span>Coordinator Monitor</span>
+                    <% if (isGlowing('/coordinator-attendance')) { %>
+                        <span class="nav-glow-badge" title="<%= glowCount('/coordinator-attendance') %> alert(s)">
+                            <span class="nav-glow-dot"></span>
+                            <span class="nav-glow-count"><%= glowCount('/coordinator-attendance') %></span>
+                        </span>
+                    <% } %>
+                </a>
+            <% } else if (user && (user.role === 'COORDINATOR' || user.role === 'HR')) { %>
+                <a href="/coordinator-attendance" class="nav-item <%= currentPath.startsWith('/coordinator-attendance') ? 'active' : '' %> <%= isGlowing('/coordinator-attendance') ? 'nav-item-glowing' : '' %>" data-glow-path="/coordinator-attendance">
+                    <span class="nav-icon"><%- include('outline-icon', {icon:'clock'}) %></span>
                     <span>My Attendance</span>
+                    <% if (isGlowing('/coordinator-attendance')) { %>
+                        <span class="nav-glow-badge" title="<%= glowCount('/coordinator-attendance') %> alert(s)">
+                            <span class="nav-glow-dot"></span>
+                            <span class="nav-glow-count"><%= glowCount('/coordinator-attendance') %></span>
+                        </span>
+                    <% } %>
                 </a>
             <% } else { %>
-                <a href="/coordinator-attendance" class="nav-item <%= currentPath.startsWith('/coordinator-attendance') ? 'active' : '' %>">
-                    <span class="nav-icon">⏱️</span>
-                    <span>Coordinator Attendance</span>
+                <a href="/coordinator-attendance" class="nav-item <%= currentPath.startsWith('/coordinator-attendance') ? 'active' : '' %> <%= isGlowing('/coordinator-attendance') ? 'nav-item-glowing' : '' %>" data-glow-path="/coordinator-attendance">
+                    <span class="nav-icon"><%- include('outline-icon', {icon:'clock'}) %></span>
+                    <span>Staff Attendance</span>
+                    <% if (isGlowing('/coordinator-attendance')) { %>
+                        <span class="nav-glow-badge" title="<%= glowCount('/coordinator-attendance') %> alert(s)">
+                            <span class="nav-glow-dot"></span>
+                            <span class="nav-glow-count"><%= glowCount('/coordinator-attendance') %></span>
+                        </span>
+                    <% } %>
                 </a>
             <% } %>
 
-            <a href="/btw" class="nav-item <%= currentPath.startsWith('/btw') ? 'active' : '' %>">
-                <span class="nav-icon">🏥</span>
+            <% if (user && user.role !== 'HEAD_HR') { %>
+            <a href="/btw" class="nav-item <%= currentPath.startsWith('/btw') ? 'active' : '' %> <%= isGlowing('/btw') ? 'nav-item-glowing' : '' %>" data-glow-path="/btw">
+                <span class="nav-icon"><%- include('outline-icon', {icon:'medical'}) %></span>
                 <span>Back-to-Work</span>
+                <% if (isGlowing('/btw')) { %>
+                    <span class="nav-glow-badge" title="<%= glowCount('/btw') %> pending / notification(s)">
+                        <span class="nav-glow-dot"></span>
+                        <span class="nav-glow-count"><%= glowCount('/btw') %></span>
+                    </span>
+                <% } %>
             </a>
 
-            <a href="/concerns" class="nav-item <%= currentPath.startsWith('/concerns') ? 'active' : '' %>">
-                <span class="nav-icon">💬</span>
+            <a href="/concerns" class="nav-item <%= currentPath.startsWith('/concerns') ? 'active' : '' %> <%= isGlowing('/concerns') ? 'nav-item-glowing' : '' %>" data-glow-path="/concerns">
+                <span class="nav-icon"><%- include('outline-icon', {icon:'message'}) %></span>
                 <span>Employee Concerns</span>
+                <% if (isGlowing('/concerns')) { %>
+                    <span class="nav-glow-badge" title="<%= glowCount('/concerns') %> pending concern(s)">
+                        <span class="nav-glow-dot"></span>
+                        <span class="nav-glow-count"><%= glowCount('/concerns') %></span>
+                    </span>
+                <% } %>
             </a>
 
-            <a href="/manpower" class="nav-item <%= currentPath.startsWith('/manpower') ? 'active' : '' %>">
-                <span class="nav-icon">🤝</span>
+            <a href="/manpower" class="nav-item <%= currentPath.startsWith('/manpower') ? 'active' : '' %> <%= isGlowing('/manpower') ? 'nav-item-glowing' : '' %>" data-glow-path="/manpower">
+                <span class="nav-icon"><%- include('outline-icon', {icon:'people'}) %></span>
                 <span>Manpower Requests</span>
+                <% if (isGlowing('/manpower')) { %>
+                    <span class="nav-glow-badge" title="<%= glowCount('/manpower') %> pending request(s)">
+                        <span class="nav-glow-dot"></span>
+                        <span class="nav-glow-count"><%= glowCount('/manpower') %></span>
+                    </span>
+                <% } %>
             </a>
+            <% } %>
         </div>
 
         <div class="nav-section-label">Intelligence & Admin</div>
         <div class="nav-section">
-            <a href="/reports" class="nav-item <%= currentPath.startsWith('/reports') ? 'active' : '' %>">
-                <span class="nav-icon">📈</span>
-                <span>Reports & Exports</span>
+            <a href="/reports" class="nav-item <%= currentPath.startsWith('/reports') ? 'active' : '' %> <%= isGlowing('/reports') ? 'nav-item-glowing' : '' %>" data-glow-path="/reports">
+                <span class="nav-icon"><%- include('outline-icon', {icon:'report'}) %></span>
+                <span>Attendance Records & Exports</span>
+                <% if (isGlowing('/reports')) { %>
+                    <span class="nav-glow-badge" title="<%= glowCount('/reports') %> alert(s)">
+                        <span class="nav-glow-dot"></span>
+                        <span class="nav-glow-count"><%= glowCount('/reports') %></span>
+                    </span>
+                <% } %>
             </a>
 
             <% if (user && (user.role === 'HR' || user.role === 'ADMIN')) { %>
-                <a href="/admin/pending-coordinators" class="nav-item <%= currentPath.startsWith('/admin/pending-coordinators') ? 'active' : '' %>">
-                    <span class="nav-icon">⏳</span>
+                <a href="/admin/pending-coordinators" class="nav-item <%= currentPath.startsWith('/admin/pending-coordinators') ? 'active' : '' %> <%= isGlowing('/admin/pending-coordinators') ? 'nav-item-glowing' : '' %>" data-glow-path="/admin/pending-coordinators">
+                    <span class="nav-icon"><%- include('outline-icon', {icon:'hourglass'}) %></span>
                     <span>Pending Approvals</span>
+                    <% if (isGlowing('/admin/pending-coordinators')) { %>
+                        <span class="nav-glow-badge" title="<%= glowCount('/admin/pending-coordinators') %> pending coordinator registration(s)">
+                            <span class="nav-glow-dot"></span>
+                            <span class="nav-glow-count"><%= glowCount('/admin/pending-coordinators') %></span>
+                        </span>
+                    <% } %>
                 </a>
-                <a href="/admin/areas" class="nav-item <%= currentPath.startsWith('/admin/areas') ? 'active' : '' %>">
-                    <span class="nav-icon">🏢</span>
+                <a href="/admin/areas" class="nav-item <%= currentPath.startsWith('/admin/areas') ? 'active' : '' %> <%= isGlowing('/admin/areas') ? 'nav-item-glowing' : '' %>" data-glow-path="/admin/areas">
+                    <span class="nav-icon"><%- include('outline-icon', {icon:'building'}) %></span>
                     <span>Warehouses / Areas</span>
+                    <% if (isGlowing('/admin/areas')) { %>
+                        <span class="nav-glow-badge" title="<%= glowCount('/admin/areas') %> alert(s)">
+                            <span class="nav-glow-dot"></span>
+                            <span class="nav-glow-count"><%= glowCount('/admin/areas') %></span>
+                        </span>
+                    <% } %>
                 </a>
-                <a href="/admin/positions" class="nav-item <%= currentPath.startsWith('/admin/positions') ? 'active' : '' %>">
-                    <span class="nav-icon">🏷️</span>
+                <a href="/admin/positions" class="nav-item <%= currentPath.startsWith('/admin/positions') ? 'active' : '' %> <%= isGlowing('/admin/positions') ? 'nav-item-glowing' : '' %>" data-glow-path="/admin/positions">
+                    <span class="nav-icon"><%- include('outline-icon', {icon:'briefcase'}) %></span>
                     <span>Positions</span>
+                    <% if (isGlowing('/admin/positions')) { %>
+                        <span class="nav-glow-badge" title="<%= glowCount('/admin/positions') %> alert(s)">
+                            <span class="nav-glow-dot"></span>
+                            <span class="nav-glow-count"><%= glowCount('/admin/positions') %></span>
+                        </span>
+                    <% } %>
                 </a>
             <% } %>
 
             <% if (user && user.role === 'ADMIN') { %>
-                <a href="/admin/users" class="nav-item <%= currentPath.startsWith('/admin/users') ? 'active' : '' %>">
-                    <span class="nav-icon">⚙️</span>
+                <a href="/admin/users" class="nav-item <%= currentPath.startsWith('/admin/users') ? 'active' : '' %> <%= isGlowing('/admin/users') ? 'nav-item-glowing' : '' %>" data-glow-path="/admin/users">
+                    <span class="nav-icon"><%- include('outline-icon', {icon:'people'}) %></span>
                     <span>User Management</span>
+                    <% if (isGlowing('/admin/users')) { %>
+                        <span class="nav-glow-badge" title="<%= glowCount('/admin/users') %> alert(s)">
+                            <span class="nav-glow-dot"></span>
+                            <span class="nav-glow-count"><%= glowCount('/admin/users') %></span>
+                        </span>
+                    <% } %>
                 </a>
-                <a href="/admin/audit-logs" class="nav-item <%= currentPath.startsWith('/admin/audit-logs') ? 'active' : '' %>">
-                    <span class="nav-icon">📜</span>
+                <a href="/admin/audit-logs" class="nav-item <%= currentPath.startsWith('/admin/audit-logs') ? 'active' : '' %> <%= isGlowing('/admin/audit-logs') ? 'nav-item-glowing' : '' %>" data-glow-path="/admin/audit-logs">
+                    <span class="nav-icon"><%- include('outline-icon', {icon:'report'}) %></span>
                     <span>Audit Logs</span>
                 </a>
             <% } %>
@@ -101,7 +216,7 @@
         <div class="nav-section-label">Account</div>
         <div class="nav-section">
             <a href="/profile" class="nav-item <%= currentPath === '/profile' ? 'active' : '' %>">
-                <span class="nav-icon">👤</span>
+                <span class="nav-icon"><%- include('outline-icon', {icon:'person'}) %></span>
                 <span>My Profile</span>
             </a>
         </div>
@@ -109,7 +224,7 @@
 
     <div class="sidebar-footer">
         <div>TAASCOR Management & General Services Corp.</div>
-        <div style="font-size: 0.7rem; color: rgba(255,255,255,0.4); margin-top: 4px;">v1.0 • Asia/Manila</div>
+        <div class="sidebar-version">v1.0 • Asia/Manila</div>
     </div>
 </aside>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>

@@ -1,353 +1,415 @@
--- TAASCOR Attendance Monitoring System - Database Schema
--- SQLite with WAL mode, foreign keys enforced
-
-PRAGMA journal_mode=WAL;
-PRAGMA foreign_keys=ON;
-
------------------------------------------------------
--- CORE TABLES
------------------------------------------------------
+-- TAASCOR: MySQL 8.0+ / MariaDB 10.4+, InnoDB, UTF-8. Timestamps are UTC.
 
 CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT NOT NULL UNIQUE COLLATE NOCASE,
-    password_hash TEXT NOT NULL,
-    full_name TEXT NOT NULL,
-    role TEXT NOT NULL CHECK(role IN ('ADMIN','HR','COORDINATOR')),
-    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','active','suspended','rejected')),
-    email_verified INTEGER NOT NULL DEFAULT 0,
-    must_change_password INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    last_login_at TEXT,
+
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(254) NOT NULL UNIQUE,
+    password_hash VARCHAR(191) NOT NULL,
+    full_name VARCHAR(191) NOT NULL,
+    role VARCHAR(191) NOT NULL CHECK(role IN ('ADMIN','HR','HEAD_HR','COORDINATOR')),
+    status VARCHAR(191) NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','active','suspended','rejected')),
+    email_verified INT NOT NULL DEFAULT 0,
+    must_change_password INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_login_at DATETIME,
     rejection_remarks TEXT,
-    approved_by INTEGER REFERENCES users(id),
-    approved_at TEXT,
-    profile_photo TEXT,
-    cover_photo TEXT,
-    phone TEXT,
-    bio TEXT
-);
+    approved_by INT,
+    approved_at DATETIME,
+    profile_photo LONGTEXT,
+    cover_photo LONGTEXT,
+    phone VARCHAR(191),
+    bio TEXT,
+    FOREIGN KEY (approved_by) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS areas (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
+
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(191) NOT NULL UNIQUE,
     description TEXT,
-    is_active INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    created_by INTEGER REFERENCES users(id)
-);
+    is_active INT NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by INT,
+    FOREIGN KEY (created_by) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS positions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL UNIQUE,
+
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(191) NOT NULL UNIQUE,
     description TEXT,
-    is_active INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    created_by INTEGER REFERENCES users(id)
-);
+    is_active INT NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by INT,
+    FOREIGN KEY (created_by) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS coordinator_area_assignments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL REFERENCES users(id),
-    area_id INTEGER NOT NULL REFERENCES areas(id),
-    assigned_by INTEGER NOT NULL REFERENCES users(id),
-    assigned_at TEXT NOT NULL DEFAULT (datetime('now')),
-    ended_at TEXT,
-    is_current INTEGER NOT NULL DEFAULT 1,
-    remarks TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_caa_user ON coordinator_area_assignments(user_id);
-CREATE INDEX IF NOT EXISTS idx_caa_current ON coordinator_area_assignments(user_id, is_current);
+
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    area_id INT NOT NULL,
+    assigned_by INT NOT NULL,
+    assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ended_at DATETIME,
+    is_current INT NOT NULL DEFAULT 1,
+    remarks TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (area_id) REFERENCES areas(id),
+    FOREIGN KEY (assigned_by) REFERENCES users(id),
+    INDEX idx_caa_user (user_id),
+    INDEX idx_caa_current (user_id, is_current)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS departments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    area_id INTEGER NOT NULL REFERENCES areas(id),
-    name TEXT NOT NULL,
-    description TEXT,
-    created_by INTEGER REFERENCES users(id),
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    UNIQUE(area_id, name COLLATE NOCASE)
-);
-CREATE INDEX IF NOT EXISTS idx_dept_area ON departments(area_id);
 
------------------------------------------------------
--- EMPLOYEE MANAGEMENT
------------------------------------------------------
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    area_id INT NOT NULL,
+    name VARCHAR(191) NOT NULL,
+    description TEXT,
+    created_by INT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(area_id, name),
+    FOREIGN KEY (area_id) REFERENCES areas(id),
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    INDEX idx_dept_area (area_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS employees (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    employee_id TEXT NOT NULL UNIQUE,
-    first_name TEXT NOT NULL,
-    last_name TEXT NOT NULL,
-    full_name TEXT NOT NULL,
-    area_id INTEGER NOT NULL REFERENCES areas(id),
-    coordinator_id INTEGER REFERENCES users(id),
-    department_id INTEGER REFERENCES departments(id),
-    position_id INTEGER REFERENCES positions(id),
-    employment_start_date TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','inactive')),
-    inactivation_date TEXT,
+
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    employee_id VARCHAR(191) NOT NULL UNIQUE,
+    first_name VARCHAR(191) NOT NULL,
+    last_name VARCHAR(191) NOT NULL,
+    full_name VARCHAR(191) NOT NULL,
+    area_id INT NOT NULL,
+    coordinator_id INT,
+    department_id INT,
+    position_id INT,
+    employment_start_date DATE NOT NULL,
+    status VARCHAR(191) NOT NULL DEFAULT 'active' CHECK(status IN ('active','inactive')),
+    inactivation_date DATE,
     inactivation_reason TEXT,
     remarks TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    created_by INTEGER REFERENCES users(id),
-    updated_by INTEGER REFERENCES users(id)
-);
-CREATE INDEX IF NOT EXISTS idx_emp_area ON employees(area_id);
-CREATE INDEX IF NOT EXISTS idx_emp_dept ON employees(department_id);
-CREATE INDEX IF NOT EXISTS idx_emp_coordinator ON employees(coordinator_id);
-CREATE INDEX IF NOT EXISTS idx_emp_status ON employees(status);
-CREATE INDEX IF NOT EXISTS idx_emp_empid ON employees(employee_id);
-
------------------------------------------------------
--- SCHEDULING
------------------------------------------------------
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by INT,
+    updated_by INT,
+    FOREIGN KEY (area_id) REFERENCES areas(id),
+    FOREIGN KEY (coordinator_id) REFERENCES users(id),
+    FOREIGN KEY (department_id) REFERENCES departments(id),
+    FOREIGN KEY (position_id) REFERENCES positions(id),
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (updated_by) REFERENCES users(id),
+    INDEX idx_emp_area (area_id),
+    INDEX idx_emp_dept (department_id),
+    INDEX idx_emp_coordinator (coordinator_id),
+    INDEX idx_emp_status (status),
+    INDEX idx_emp_empid (employee_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS employee_schedules (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    employee_id INTEGER NOT NULL REFERENCES employees(id),
-    work_date TEXT NOT NULL,
-    shift_start TEXT,          -- HH:MM format, NULL if rest day
-    shift_end TEXT,            -- HH:MM format, can be > 24:00 for overnight
-    is_rest_day INTEGER NOT NULL DEFAULT 0,
-    notes TEXT,
-    created_by INTEGER NOT NULL REFERENCES users(id),
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_by INTEGER REFERENCES users(id),
-    updated_at TEXT,
-    version INTEGER NOT NULL DEFAULT 1,
-    UNIQUE(employee_id, work_date)
-);
-CREATE INDEX IF NOT EXISTS idx_sched_emp_date ON employee_schedules(employee_id, work_date);
-CREATE INDEX IF NOT EXISTS idx_sched_date ON employee_schedules(work_date);
 
------------------------------------------------------
--- EMPLOYEE ATTENDANCE
------------------------------------------------------
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    employee_id INT NOT NULL,
+    work_date DATE NOT NULL,
+    shift_start VARCHAR(64),
+    shift_end VARCHAR(64),
+    is_rest_day INT NOT NULL DEFAULT 0,
+    notes TEXT,
+    created_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by INT,
+    updated_at DATETIME,
+    version INT NOT NULL DEFAULT 1,
+    UNIQUE(employee_id, work_date),
+    FOREIGN KEY (employee_id) REFERENCES employees(id),
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (updated_by) REFERENCES users(id),
+    INDEX idx_sched_emp_date (employee_id, work_date),
+    INDEX idx_sched_date (work_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS employee_attendance (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    employee_id INTEGER NOT NULL REFERENCES employees(id),
-    schedule_id INTEGER REFERENCES employee_schedules(id),
-    work_date TEXT NOT NULL,
-    status TEXT NOT NULL CHECK(status IN ('present','late','absent','on_leave','rest_day')),
-    time_in TEXT,
-    time_out TEXT,
-    remarks TEXT,
-    recorded_by INTEGER NOT NULL REFERENCES users(id),
-    recorded_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_by INTEGER REFERENCES users(id),
-    updated_at TEXT,
-    version INTEGER NOT NULL DEFAULT 1,
-    UNIQUE(employee_id, work_date)
-);
-CREATE INDEX IF NOT EXISTS idx_att_emp_date ON employee_attendance(employee_id, work_date);
-CREATE INDEX IF NOT EXISTS idx_att_date ON employee_attendance(work_date);
-CREATE INDEX IF NOT EXISTS idx_att_status ON employee_attendance(status);
 
------------------------------------------------------
--- COORDINATOR ATTENDANCE
------------------------------------------------------
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    employee_id INT NOT NULL,
+    schedule_id INT,
+    work_date DATE NOT NULL,
+    status VARCHAR(191) NOT NULL CHECK(status IN ('present','late','absent','on_leave','rest_day','no_work','leave','sent_home')),
+    time_in VARCHAR(64),
+    time_out VARCHAR(64),
+    remarks TEXT,
+    recorded_by INT NOT NULL,
+    recorded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_by INT,
+    updated_at DATETIME,
+    version INT NOT NULL DEFAULT 1,
+    UNIQUE(employee_id, work_date),
+    FOREIGN KEY (employee_id) REFERENCES employees(id),
+    FOREIGN KEY (schedule_id) REFERENCES employee_schedules(id),
+    FOREIGN KEY (recorded_by) REFERENCES users(id),
+    FOREIGN KEY (updated_by) REFERENCES users(id),
+    INDEX idx_att_emp_date (employee_id, work_date),
+    INDEX idx_att_date (work_date),
+    INDEX idx_att_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS coordinator_attendance (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL REFERENCES users(id),
-    work_date TEXT NOT NULL,
-    time_in TEXT NOT NULL,
-    time_out TEXT,
-    time_in_server TEXT NOT NULL,
-    time_out_server TEXT,
-    correction_requested INTEGER NOT NULL DEFAULT 0,
+
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    work_date DATE NOT NULL,
+    time_in VARCHAR(64) NOT NULL,
+    time_out VARCHAR(64),
+    time_in_server VARCHAR(64) NOT NULL,
+    time_out_server VARCHAR(64),
+    correction_requested INT NOT NULL DEFAULT 0,
     correction_reason TEXT,
-    correction_approved_by INTEGER REFERENCES users(id),
-    correction_approved_at TEXT,
+    correction_approved_by INT,
+    correction_approved_at DATETIME,
     correction_note TEXT,
     remarks TEXT,
-    UNIQUE(user_id, work_date)
-);
-CREATE INDEX IF NOT EXISTS idx_coord_att_user ON coordinator_attendance(user_id);
-CREATE INDEX IF NOT EXISTS idx_coord_att_date ON coordinator_attendance(work_date);
+    UNIQUE(user_id, work_date),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (correction_approved_by) REFERENCES users(id),
+    INDEX idx_coord_att_user (user_id),
+    INDEX idx_coord_att_date (work_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
------------------------------------------------------
--- BACK-TO-WORK CASES
------------------------------------------------------
+ALTER TABLE coordinator_attendance ADD COLUMN IF NOT EXISTS time_in_photo LONGTEXT;
+ALTER TABLE coordinator_attendance ADD COLUMN IF NOT EXISTS time_out_photo LONGTEXT;
 
 CREATE TABLE IF NOT EXISTS btw_cases (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    case_ref TEXT NOT NULL UNIQUE,
-    employee_id INTEGER NOT NULL REFERENCES employees(id),
-    area_id INTEGER NOT NULL REFERENCES areas(id),
-    coordinator_id INTEGER NOT NULL REFERENCES users(id),
-    status TEXT NOT NULL DEFAULT 'pending_hr_review' CHECK(status IN ('pending_hr_review','for_clarification','approved','not_approved')),
-    absence_dates TEXT NOT NULL,           -- JSON array of date strings
+
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    case_ref VARCHAR(191) NOT NULL UNIQUE,
+    employee_id INT NOT NULL,
+    area_id INT NOT NULL,
+    coordinator_id INT NOT NULL,
+    status VARCHAR(191) NOT NULL DEFAULT 'pending_hr_review' CHECK(status IN ('pending_hr_review','for_clarification','approved','not_approved')),
+    absence_dates TEXT NOT NULL,
     absence_reason TEXT,
-    hr_reviewer_id INTEGER REFERENCES users(id),
+    hr_reviewer_id INT,
     hr_decision TEXT,
+    action_type VARCHAR(32) DEFAULT 'none',
     hr_remarks TEXT,
-    decision_at TEXT,
-    authorized_return_date TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    dedup_key TEXT UNIQUE                   -- Prevents duplicate case creation
-);
-CREATE INDEX IF NOT EXISTS idx_btw_employee ON btw_cases(employee_id);
-CREATE INDEX IF NOT EXISTS idx_btw_status ON btw_cases(status);
-CREATE INDEX IF NOT EXISTS idx_btw_coordinator ON btw_cases(coordinator_id);
-CREATE INDEX IF NOT EXISTS idx_btw_area ON btw_cases(area_id);
+    article_violated TEXT,
+    suspension_start DATE,
+    suspension_end DATE,
+    decision_at DATETIME,
+    authorized_return_date DATE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    dedup_key VARCHAR(191) UNIQUE,
+    FOREIGN KEY (employee_id) REFERENCES employees(id),
+    FOREIGN KEY (area_id) REFERENCES areas(id),
+    FOREIGN KEY (coordinator_id) REFERENCES users(id),
+    FOREIGN KEY (hr_reviewer_id) REFERENCES users(id),
+    INDEX idx_btw_employee (employee_id),
+    INDEX idx_btw_status (status),
+    INDEX idx_btw_coordinator (coordinator_id),
+    INDEX idx_btw_area (area_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS btw_case_entries (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    case_id INTEGER NOT NULL REFERENCES btw_cases(id),
-    author_id INTEGER NOT NULL REFERENCES users(id),
-    author_role TEXT NOT NULL,
-    content TEXT NOT NULL,
-    entry_type TEXT NOT NULL DEFAULT 'comment' CHECK(entry_type IN ('comment','status_change','decision','system')),
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-CREATE INDEX IF NOT EXISTS idx_btw_entries_case ON btw_case_entries(case_id);
 
------------------------------------------------------
--- CONCERN REPORTS
------------------------------------------------------
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    case_id INT NOT NULL,
+    author_id INT NOT NULL,
+    author_role VARCHAR(191) NOT NULL,
+    content TEXT NOT NULL,
+    entry_type VARCHAR(191) NOT NULL DEFAULT 'comment' CHECK(entry_type IN ('comment','status_change','decision','system')),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (case_id) REFERENCES btw_cases(id),
+    FOREIGN KEY (author_id) REFERENCES users(id),
+    INDEX idx_btw_entries_case (case_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS concern_reports (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    employee_id INTEGER NOT NULL REFERENCES employees(id),
-    area_id INTEGER NOT NULL REFERENCES areas(id),
-    category TEXT NOT NULL,
+
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    employee_id INT NOT NULL,
+    area_id INT NOT NULL,
+    category VARCHAR(191) NOT NULL,
     description TEXT NOT NULL,
-    reported_by INTEGER NOT NULL REFERENCES users(id),
-    status TEXT NOT NULL DEFAULT 'submitted' CHECK(status IN ('submitted','under_review','for_employee_reporting','resolved')),
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-CREATE INDEX IF NOT EXISTS idx_concern_employee ON concern_reports(employee_id);
-CREATE INDEX IF NOT EXISTS idx_concern_status ON concern_reports(status);
-CREATE INDEX IF NOT EXISTS idx_concern_area ON concern_reports(area_id);
+    reported_by INT NOT NULL,
+    status VARCHAR(191) NOT NULL DEFAULT 'submitted' CHECK(status IN ('submitted','under_review','for_employee_reporting','resolved')),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (employee_id) REFERENCES employees(id),
+    FOREIGN KEY (area_id) REFERENCES areas(id),
+    FOREIGN KEY (reported_by) REFERENCES users(id),
+    INDEX idx_concern_employee (employee_id),
+    INDEX idx_concern_status (status),
+    INDEX idx_concern_area (area_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS concern_entries (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    concern_id INTEGER NOT NULL REFERENCES concern_reports(id),
-    author_id INTEGER NOT NULL REFERENCES users(id),
-    author_role TEXT NOT NULL,
-    content TEXT NOT NULL,
-    entry_type TEXT NOT NULL DEFAULT 'comment' CHECK(entry_type IN ('comment','status_change','instruction','system')),
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-CREATE INDEX IF NOT EXISTS idx_concern_entries ON concern_entries(concern_id);
 
------------------------------------------------------
--- MANPOWER REQUESTS
------------------------------------------------------
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    concern_id INT NOT NULL,
+    author_id INT NOT NULL,
+    author_role VARCHAR(191) NOT NULL,
+    content TEXT NOT NULL,
+    entry_type VARCHAR(191) NOT NULL DEFAULT 'comment' CHECK(entry_type IN ('comment','status_change','instruction','system')),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (concern_id) REFERENCES concern_reports(id),
+    FOREIGN KEY (author_id) REFERENCES users(id),
+    INDEX idx_concern_entries (concern_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS manpower_requests (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    area_id INTEGER NOT NULL REFERENCES areas(id),
-    requested_by INTEGER NOT NULL REFERENCES users(id),
-    status TEXT NOT NULL DEFAULT 'submitted' CHECK(status IN ('submitted','under_review','partially_filled','filled','declined','cancelled')),
-    deployment_date TEXT NOT NULL,
-    shift_details TEXT,
+
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    area_id INT NOT NULL,
+    requested_by INT NOT NULL,
+    status VARCHAR(191) NOT NULL DEFAULT 'submitted' CHECK(status IN ('submitted','under_review','partially_filled','filled','declined','cancelled')),
+    deployment_date DATE NOT NULL,
+    shift_details VARCHAR(64),
     reason TEXT NOT NULL,
-    priority TEXT NOT NULL DEFAULT 'normal' CHECK(priority IN ('low','normal','high','urgent')),
+    priority VARCHAR(191) NOT NULL DEFAULT 'normal' CHECK(priority IN ('low','normal','high','urgent')),
     remarks TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-CREATE INDEX IF NOT EXISTS idx_mp_area ON manpower_requests(area_id);
-CREATE INDEX IF NOT EXISTS idx_mp_status ON manpower_requests(status);
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (area_id) REFERENCES areas(id),
+    FOREIGN KEY (requested_by) REFERENCES users(id),
+    INDEX idx_mp_area (area_id),
+    INDEX idx_mp_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS manpower_request_positions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    request_id INTEGER NOT NULL REFERENCES manpower_requests(id),
-    position_id INTEGER NOT NULL REFERENCES positions(id),
-    quantity_requested INTEGER NOT NULL CHECK(quantity_requested > 0)
-);
-CREATE INDEX IF NOT EXISTS idx_mpp_request ON manpower_request_positions(request_id);
+
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    request_id INT NOT NULL,
+    position_id INT NOT NULL,
+    quantity_requested INT NOT NULL CHECK(quantity_requested > 0),
+    FOREIGN KEY (request_id) REFERENCES manpower_requests(id),
+    FOREIGN KEY (position_id) REFERENCES positions(id),
+    INDEX idx_mpp_request (request_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS manpower_allocations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    request_id INTEGER NOT NULL REFERENCES manpower_requests(id),
-    request_position_id INTEGER NOT NULL REFERENCES manpower_request_positions(id),
-    employee_id INTEGER REFERENCES employees(id),
-    worker_name TEXT,                       -- For incoming workers not yet in system
-    allocated_by INTEGER NOT NULL REFERENCES users(id),
-    status TEXT NOT NULL DEFAULT 'proposed' CHECK(status IN ('proposed','confirmed','did_not_report')),
-    confirmed_at TEXT,
-    confirmed_by INTEGER REFERENCES users(id),
-    actual_position_id INTEGER REFERENCES positions(id),
+
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    request_id INT NOT NULL,
+    request_position_id INT NOT NULL,
+    employee_id INT,
+    worker_name VARCHAR(191),
+    allocated_by INT NOT NULL,
+    status VARCHAR(191) NOT NULL DEFAULT 'proposed' CHECK(status IN ('proposed','confirmed','did_not_report')),
+    confirmed_at DATETIME,
+    confirmed_by INT,
+    actual_position_id INT,
     position_change_reason TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-CREATE INDEX IF NOT EXISTS idx_alloc_request ON manpower_allocations(request_id);
-CREATE INDEX IF NOT EXISTS idx_alloc_employee ON manpower_allocations(employee_id);
-CREATE INDEX IF NOT EXISTS idx_alloc_status ON manpower_allocations(status);
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (request_id) REFERENCES manpower_requests(id),
+    FOREIGN KEY (request_position_id) REFERENCES manpower_request_positions(id),
+    FOREIGN KEY (employee_id) REFERENCES employees(id),
+    FOREIGN KEY (allocated_by) REFERENCES users(id),
+    FOREIGN KEY (confirmed_by) REFERENCES users(id),
+    FOREIGN KEY (actual_position_id) REFERENCES positions(id),
+    INDEX idx_alloc_request (request_id),
+    INDEX idx_alloc_employee (employee_id),
+    INDEX idx_alloc_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS manpower_request_entries (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    request_id INTEGER NOT NULL REFERENCES manpower_requests(id),
-    author_id INTEGER NOT NULL REFERENCES users(id),
-    author_role TEXT NOT NULL,
-    content TEXT NOT NULL,
-    entry_type TEXT NOT NULL DEFAULT 'comment' CHECK(entry_type IN ('comment','status_change','allocation','system')),
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-CREATE INDEX IF NOT EXISTS idx_mp_entries ON manpower_request_entries(request_id);
 
------------------------------------------------------
--- NOTIFICATIONS
------------------------------------------------------
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    request_id INT NOT NULL,
+    author_id INT NOT NULL,
+    author_role VARCHAR(191) NOT NULL,
+    content TEXT NOT NULL,
+    entry_type VARCHAR(191) NOT NULL DEFAULT 'comment' CHECK(entry_type IN ('comment','status_change','allocation','system')),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (request_id) REFERENCES manpower_requests(id),
+    FOREIGN KEY (author_id) REFERENCES users(id),
+    INDEX idx_mp_entries (request_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS notifications (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL REFERENCES users(id),
-    title TEXT NOT NULL,
-    message TEXT NOT NULL,
-    link TEXT,
-    is_read INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    dedup_key TEXT                         -- Optional deduplication
-);
-CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, is_read);
-CREATE INDEX IF NOT EXISTS idx_notif_dedup ON notifications(dedup_key);
 
------------------------------------------------------
--- AUDIT LOGS
------------------------------------------------------
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    title VARCHAR(191) NOT NULL,
+    message TEXT NOT NULL,
+    link VARCHAR(191),
+    is_read INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    dedup_key VARCHAR(191),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    INDEX idx_notif_user (user_id, is_read),
+    INDEX idx_notif_dedup (dedup_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS audit_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER REFERENCES users(id),
-    action TEXT NOT NULL,
-    entity_type TEXT,
-    entity_id INTEGER,
-    details TEXT,                          -- JSON
-    ip_address TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_logs(user_id);
-CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_logs(entity_type, entity_id);
-CREATE INDEX IF NOT EXISTS idx_audit_date ON audit_logs(created_at);
 
------------------------------------------------------
--- EMAIL TOKENS
------------------------------------------------------
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    action VARCHAR(191) NOT NULL,
+    entity_type VARCHAR(191),
+    entity_id INT,
+    details TEXT,
+    ip_address VARCHAR(191),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    INDEX idx_audit_user (user_id),
+    INDEX idx_audit_entity (entity_type, entity_id),
+    INDEX idx_audit_date (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS email_verification_tokens (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL REFERENCES users(id),
-    token TEXT NOT NULL UNIQUE,
-    expires_at TEXT NOT NULL,
-    used_at TEXT
-);
+
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    token VARCHAR(191) NOT NULL UNIQUE,
+    expires_at DATETIME NOT NULL,
+    used_at DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL REFERENCES users(id),
-    token TEXT NOT NULL UNIQUE,
-    expires_at TEXT NOT NULL,
-    used_at TEXT
-);
+
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    token VARCHAR(191) NOT NULL UNIQUE,
+    expires_at DATETIME NOT NULL,
+    used_at DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS sessions (
+    session_id VARCHAR(128) COLLATE utf8mb4_bin NOT NULL PRIMARY KEY,
+    expires INT UNSIGNED NOT NULL,
+    data MEDIUMTEXT COLLATE utf8mb4_bin,
+    INDEX idx_sessions_expires (expires)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE IF NOT EXISTS manpower_request_handlers (
+ request_id INT NOT NULL PRIMARY KEY,
+ hr_id INT NOT NULL,
+ claimed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ FOREIGN KEY (request_id) REFERENCES manpower_requests(id),
+ FOREIGN KEY (hr_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS btw_hr_actions (
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    case_id INT NOT NULL,
+    author_id INT NOT NULL,
+    decision VARCHAR(32) NOT NULL,
+    action_type VARCHAR(32) NOT NULL DEFAULT 'none',
+    issued_date DATE,
+    suspension_start DATE,
+    suspension_end DATE,
+    return_date DATE,
+    article_violated TEXT,
+    summary TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (case_id) REFERENCES btw_cases(id),
+    FOREIGN KEY (author_id) REFERENCES users(id),
+    INDEX idx_btw_action_case (case_id, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

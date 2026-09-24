@@ -1,17 +1,17 @@
 // Audit logging service
 const { getDb } = require('../db/database');
 
-function logAction(userId, action, entityType = null, entityId = null, details = null, ipAddress = null) {
+async function logAction(userId, action, entityType = null, entityId = null, details = null, ipAddress = null) {
     const db = getDb();
     const detailsJson = details ? JSON.stringify(details) : null;
     
-    db.prepare(
+    (await db.prepare(
         `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details, ip_address, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`
-    ).run(userId, action, entityType, entityId, detailsJson, ipAddress);
+         VALUES (?, ?, ?, ?, ?, ?, UTC_TIMESTAMP())`
+    ).run(userId, action, entityType, entityId, detailsJson, ipAddress));
 }
 
-function getAuditLogs(filters = {}, limit = 50, offset = 0) {
+async function getAuditLogs(filters = {}, limit = 50, offset = 0) {
     const db = getDb();
     let where = [];
     let params = [];
@@ -43,18 +43,18 @@ function getAuditLogs(filters = {}, limit = 50, offset = 0) {
     
     const whereClause = where.length > 0 ? 'WHERE ' + where.join(' AND ') : '';
     
-    const logs = db.prepare(
+    const logs = (await db.prepare(
         `SELECT a.*, u.full_name as user_name, u.role as user_role
          FROM audit_logs a
          LEFT JOIN users u ON a.user_id = u.id
          ${whereClause}
          ORDER BY a.created_at DESC
          LIMIT ? OFFSET ?`
-    ).all(...params, limit, offset);
+    ).all(...params, limit, offset));
     
-    const countResult = db.prepare(
+    const countResult = (await db.prepare(
         `SELECT COUNT(*) as count FROM audit_logs a ${whereClause}`
-    ).get(...params);
+    ).get(...params));
     
     return { logs, total: countResult.count };
 }

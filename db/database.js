@@ -1,95 +1,90 @@
-const { DatabaseSync } = require('node:sqlite');
-const path = require('path');
+require('dotenv').config();
+const mysql = require('mysql2/promise');
 const fs = require('fs');
+const path = require('path');
+const { AsyncLocalStorage } = require('async_hooks');
+let pool;
+const transactions = new AsyncLocalStorage();
 
-const DB_PATH = path.join(__dirname, 'taascor.db');
-const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
-
-let rawDb = null;
-
-class WrappedDatabase {
-    constructor(db) {
-        this.db = db;
+function databaseOptions() {
+    for (const key of ['DB_HOST', 'DB_USER', 'DB_NAME']) {
+        if (!process.env[key]) throw new Error(key + ' is required. Configure MySQL in .env or your hosting panel.');
     }
-
-    exec(sql) {
-        return this.db.exec(sql);
+    return {
+        host: process.env.DB_HOST, port: Number(process.env.DB_PORT || 3306),
+        user: process.env.DB_USER, password: process.env.DB_PASSWORD || '',
+        database: process.env.DB_NAME, charset: 'utf8mb4_unicode_ci',
+        timezone: 'Z', dateStrings: true, decimalNumbers: true,
+        waitForConnections: true, connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || 5),
+        queueLimit: 100, multipleStatements: false,
+        ...(process.env.DB_SSL === 'true' ? { ssl: {
+            rejectUnauthorized: true,
+            ...(process.env.DB_SSL_CA ? { ca: fs.readFileSync(process.env.DB_SSL_CA, 'utf8') } : {})
+        } } : {})
+    };
+}
+function getPool() {
+    if (!pool) {
+        pool = mysql.createPool(databaseOptions());
+        pool.on('connection', connection => {
+            connection.query("SET time_zone = '+00:00'", error => {
+                if (error) connection.destroy();
+            });
+        });
     }
-
+    return pool;
+}
+function parameter(value) {
+    if (value === undefined) return null;
+    // Convert the existing ISO token timestamps to UTC MySQL DATETIME values.
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value)) {
+        return new Date(value).toISOString().slice(0, 19).replace('T', ' ');
+    }
+    return value;
+}
+const database = {
     prepare(sql) {
-        const stmt = this.db.prepare(sql);
+        const query = async params => {
+            const connection = transactions.getStore() || getPool();
+            const [result] = await connection.execute(sql, params.map(parameter));
+            return result;
+        };
         return {
-            run: (...params) => {
-                const res = stmt.run(...params);
-                return {
-                    changes: res ? res.changes : 0,
-                    lastInsertRowid: res && res.lastInsertRowid !== undefined ? Number(res.lastInsertRowid) : 0
-                };
-            },
-            get: (...params) => {
-                return stmt.get(...params);
-            },
-            all: (...params) => {
-                return stmt.all(...params);
+            async get(...params) { return (await query(params))[0]; },
+            async all(...params) { return query(params); },
+            async run(...params) {
+                const result = await query(params);
+                return { changes: result.affectedRows, lastInsertRowid: result.insertId };
             }
         };
-    }
-
+    },
+    async exec(sql) { return (transactions.getStore() || getPool()).query(sql); },
     transaction(fn) {
-        return (...args) => {
-            this.db.exec('BEGIN IMMEDIATE');
+        return async (...args) => {
+            if (transactions.getStore()) return fn(...args);
+            const connection = await getPool().getConnection();
             try {
-                const result = fn(...args);
-                this.db.exec('COMMIT');
+                await connection.beginTransaction();
+                const result = await transactions.run(connection, () => fn(...args));
+                await connection.commit();
                 return result;
-            } catch (err) {
-                this.db.exec('ROLLBACK');
-                throw err;
-            }
+            } catch (error) {
+                await connection.rollback();
+                throw error;
+            } finally { connection.release(); }
         };
     }
-
-    close() {
-        if (this.db) {
-            this.db.close();
-            this.db = null;
-        }
+};
+function getDb() { return database; }
+async function initializeDb() {
+    const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
+    for (const sql of schema.replace(/^--.*$/gm, '').split(';').map(s => s.trim()).filter(Boolean)) {
+        await database.exec(sql);
     }
-}
-
-let wrappedInstance = null;
-
-function getDb() {
-    if (!wrappedInstance) {
-        rawDb = new DatabaseSync(DB_PATH);
-        rawDb.exec('PRAGMA foreign_keys = ON;');
-        rawDb.exec('PRAGMA journal_mode = WAL;');
-        wrappedInstance = new WrappedDatabase(rawDb);
-    }
-    return wrappedInstance;
-}
-
-function initializeDb() {
-    const database = getDb();
-    const schema = fs.readFileSync(SCHEMA_PATH, 'utf8');
-    database.exec(schema);
-    console.log('Database initialized successfully with schema.');
     return database;
 }
-
-function runTransaction(fn) {
-    const database = getDb();
-    return database.transaction(fn)();
+async function closeDb() {
+    if (pool) { const current = pool; pool = undefined; await current.end(); }
 }
-
-function closeDb() {
-    if (wrappedInstance) {
-        wrappedInstance.close();
-        wrappedInstance = null;
-        rawDb = null;
-    }
-}
-
-process.on('exit', closeDb);
-
-module.exports = { getDb, initializeDb, runTransaction, closeDb, DB_PATH };
+function runTransaction(fn) { return database.transaction(fn)(); }
+module.exports = { getDb, getPool, initializeDb, runTransaction, closeDb, databaseOptions };

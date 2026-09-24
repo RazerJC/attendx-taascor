@@ -1,20 +1,25 @@
 require('dotenv').config();
+require('express-async-errors');
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
-const { initializeDb, getDb } = require('./db/database');
+const { initializeDb, getDb, closeDb } = require('./db/database');
+const { createSessionStore } = require('./db/session-store');
 const { createInitialAdmin } = require('./db/seed');
 const { DateTime } = require('luxon');
 const csrfProtection = require('./middleware/csrf');
 const { attachArea } = require('./middleware/area-guard');
+const { getMenuGlow } = require('./services/notification');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Initialize database
-initializeDb();
-createInitialAdmin();
+const sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret || sessionSecret.length < 32 || sessionSecret.startsWith('change-this')) {
+    throw new Error('SESSION_SECRET must be a random value of at least 32 characters.');
+}
+const sessionStore = createSessionStore();
 
 // Body parsing (support image upload)
 app.use(express.json({ limit: '15mb' }));
@@ -29,13 +34,14 @@ app.set('trust proxy', 1);
 
 // Health check & legacy compatibility (before CSRF and session)
 app.get('/health', (req, res) => res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() }));
-app.get('/ATTENDANCE/health.php', (req, res) => res.status(200).send('OK'));
-app.get('/ATTENDANCE', (req, res) => res.redirect('/'));
-app.get('/ATTENDANCE/*', (req, res) => res.redirect('/'));
+app.get(/^\/ATTENDANCE\/health\.php$/, (req, res) => res.status(200).send('OK'));
+app.get(/^\/ATTENDANCE(?:\/.*)?$/, (req, res) => res.redirect('/dashboard'));
+app.get('/', (req, res) => res.redirect('/dashboard'));
 
 // Session
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'taascor-attendance-monitoring-secret-key-2026',
+    store: sessionStore,
+    secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -52,11 +58,11 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 // Global template variables & Area attachment
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
     if (req.session.user) {
         try {
             const db = getDb();
-            const freshUser = db.prepare('SELECT id, email, full_name, role, status, profile_photo, phone, bio FROM users WHERE id = ?').get(req.session.user.id);
+            const freshUser = (await db.prepare('SELECT id, email, full_name, role, status, profile_photo, phone, bio FROM users WHERE id = ?').get(req.session.user.id));
             if (freshUser) {
                 req.session.user.full_name = freshUser.full_name;
                 req.session.user.profile_photo = freshUser.profile_photo;
@@ -68,6 +74,16 @@ app.use((req, res, next) => {
     res.locals.user = req.session.user || null;
     res.locals.currentPath = req.path;
     res.locals.DateTime = DateTime;
+    res.locals.needsCoordinatorTimeIn = false;
+    if (req.method === 'GET' && req.session.user?.role === 'COORDINATOR' && !req.path.startsWith('/api/')) {
+        try {
+            const workDate = DateTime.now().setZone('Asia/Manila').toISODate();
+            const record = await getDb().prepare('SELECT time_in FROM coordinator_attendance WHERE user_id = ? AND work_date = ?').get(req.session.user.id, workDate);
+            res.locals.needsCoordinatorTimeIn = !record?.time_in;
+        } catch (error) {
+            console.error('Unable to check coordinator time-in:', error.message);
+        }
+    }
     
     res.locals.formatDate = (dateStr) => {
         if (!dateStr) return '—';
@@ -95,7 +111,7 @@ app.use((req, res, next) => {
             if (!dt.isValid) {
                 dt = DateTime.fromISO(str.replace(' ', 'T'), { zone: 'utc' });
             }
-            return dt.isValid ? dt.setZone('Asia/Manila').toFormat('MMM dd, yyyy hh:mm a') : str;
+            return dt.isValid ? dt.setZone('Asia/Manila').toFormat('MMM dd, yyyy HH:mm') : str;
         } catch (e) {
             return dateStr;
         }
@@ -104,12 +120,18 @@ app.use((req, res, next) => {
     res.locals.formatTime = (timeStr) => {
         if (!timeStr) return '—';
         try {
-            const parts = timeStr.split(':');
+            const str = String(timeStr).trim();
+            if (/am|pm/i.test(str)) {
+                let dt = DateTime.fromFormat(str, 'h:mm a');
+                if (!dt.isValid) dt = DateTime.fromFormat(str, 'hh:mm a');
+                if (dt.isValid) return dt.toFormat('HH:mm');
+            }
+            const parts = str.split(':');
             const h = parseInt(parts[0], 10);
-            const m = parts[1];
-            const ampm = h >= 12 ? 'PM' : 'AM';
-            const h12 = h % 12 || 12;
-            return `${h12}:${m} ${ampm}`;
+            const m = parts[1] ? String(parts[1]).slice(0, 2).padStart(2, '0') : '00';
+            if (isNaN(h)) return str;
+            const h24 = String(h).padStart(2, '0');
+            return `${h24}:${m}`;
         } catch (e) {
             return timeStr;
         }
@@ -119,17 +141,20 @@ app.use((req, res, next) => {
     res.locals.flash = req.session.flash || {};
     delete req.session.flash;
 
-    // Unread notifications
+    // Unread notifications & menu lighting highlights
     if (req.session.user) {
         try {
             const db = getDb();
-            const result = db.prepare('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0').get(req.session.user.id);
+            const result = (await db.prepare('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0').get(req.session.user.id));
             res.locals.unreadCount = result ? result.count : 0;
+            res.locals.menuGlow = await getMenuGlow(req.session.user);
         } catch (e) {
             res.locals.unreadCount = 0;
+            res.locals.menuGlow = {};
         }
     } else {
         res.locals.unreadCount = 0;
+        res.locals.menuGlow = {};
     }
 
     next();
@@ -181,7 +206,7 @@ app.use((err, req, res, next) => {
 
     if (err.code === 'EBADCSRFTOKEN') {
         req.flash('error', 'Form session expired or invalid CSRF token. Please try again.');
-        const fallback = req.get('Referrer') || req.originalUrl || '/';
+        const fallback = req.get('Referrer') || '/';
         return res.redirect(fallback);
     }
 
@@ -194,11 +219,32 @@ app.use((err, req, res, next) => {
     });
 });
 
-if (require.main === module) {
-    app.listen(PORT, () => {
-        console.log(`TAASCOR Attendance Monitoring System running on http://localhost:${PORT}`);
+async function start(port = PORT) {
+    await initializeDb();
+    await createInitialAdmin();
+    await sessionStore.onReady();
+    return app.listen(port, () => {
+        console.log(`TAASCOR Attendance Tracking System (ATS) running on http://localhost:${PORT}`);
         console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     });
 }
 
+async function shutdown() {
+    await sessionStore.close();
+    await closeDb();
+}
+if (require.main === module) {
+    start().then(server => {
+        for (const signal of ['SIGINT', 'SIGTERM']) {
+            process.once(signal, () => server.close(() => shutdown().then(() => process.exit(0))));
+        }
+    }).catch(async error => {
+        console.error('Startup failed:', error.message);
+        await shutdown();
+        process.exitCode = 1;
+    });
+}
+
 module.exports = app;
+module.exports.start = start;
+module.exports.shutdown = shutdown;

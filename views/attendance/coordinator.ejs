@@ -1,161 +1,907 @@
 <%- include('../partials/layout-top') %>
 
 <% if (isCoordinator) { %>
-    <div class="page-header">
+
+<style>
+/* ── COORDINATOR ATTENDANCE — WEBCAM CAPTURE ─────────── */
+.attn-hero {
+    background: linear-gradient(135deg, #1b2a4a 0%, #2d4a8a 65%, #1e3a6e 100%);
+    border-radius: 16px;
+    padding: 28px 32px;
+    color: #fff;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 12px 32px rgba(27,42,74,0.18);
+}
+.attn-hero::after {
+    content: '';
+    position: absolute;
+    top: -60%;
+    right: -8%;
+    width: 340px;
+    height: 340px;
+    background: radial-gradient(circle, rgba(212,160,23,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+.attn-hero h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 6px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.attn-hero p {
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.78);
+    margin: 0;
+}
+.attn-hero-clock {
+    display: inline-flex;
+    flex-direction: column;
+    background: rgba(255,255,255,0.12);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 10px;
+    padding: 8px 16px;
+    text-align: center;
+    margin-top: 12px;
+}
+.attn-hero-clock .clk-time {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    font-variant-numeric: tabular-nums;
+    color: #fff;
+}
+.attn-hero-clock .clk-lbl {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.65);
+}
+
+/* Shift card */
+.shift-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 4px 18px rgba(27,42,74,0.07);
+    padding: 28px;
+    max-width: 640px;
+    margin-bottom: 24px;
+}
+.shift-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #e2e8f0;
+}
+.shift-card-header h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1b2a4a;
+}
+.shift-time-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+}
+.shift-time-row .lbl { font-size: 0.83rem; color: #64748b; font-weight: 500; }
+.shift-time-row .val { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.time-in-val  { color: #059669; }
+.time-out-val { color: #2563eb; }
+
+/* Camera Capture Button */
+.camera-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 16px;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    letter-spacing: 0.3px;
+}
+.camera-btn.time-in-btn {
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(5,150,105,0.35);
+}
+.camera-btn.time-in-btn:hover {
+    background: linear-gradient(135deg, #047857, #059669);
+    box-shadow: 0 6px 18px rgba(5,150,105,0.45);
+    transform: translateY(-1px);
+}
+.camera-btn.time-out-btn {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(37,99,235,0.35);
+}
+.camera-btn.time-out-btn:hover {
+    background: linear-gradient(135deg, #1d4ed8, #2563eb);
+    box-shadow: 0 6px 18px rgba(37,99,235,0.45);
+    transform: translateY(-1px);
+}
+.camera-btn .cam-icon { font-size: 1.4rem; }
+
+/* Photo thumbnail on record display */
+.time-photo-thumb {
+    width: 52px;
+    height: 52px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 2px solid #e2e8f0;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.time-photo-thumb:hover {
+    transform: scale(1.06);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* ── WEBCAM MODAL ──────────────────────────────────────── */
+.webcam-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+}
+.webcam-modal-overlay.active {
+    display: flex;
+}
+.webcam-modal {
+    background: #fff;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 520px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.3);
+    overflow: hidden;
+    animation: modalSlideIn 0.22s ease;
+}
+@keyframes modalSlideIn {
+    from { transform: scale(0.94) translateY(16px); opacity: 0; }
+    to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+.webcam-modal-header {
+    background: linear-gradient(135deg, #1b2a4a, #2d4a8a);
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.webcam-modal-header h4 {
+    margin: 0;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.webcam-close-btn {
+    background: rgba(255,255,255,0.18);
+    border: none;
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+}
+.webcam-close-btn:hover { background: rgba(255,255,255,0.3); }
+.webcam-modal-body { padding: 20px 24px 24px; }
+
+/* Camera preview */
+.camera-preview-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: #0f172a;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+#cameraVideo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1); /* mirror */
+    display: block;
+}
+#cameraCanvas { display: none; }
+.camera-preview-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+.camera-face-guide {
+    width: 55%;
+    aspect-ratio: 3/4;
+    border: 3px dashed rgba(255,255,255,0.45);
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+}
+/* Captured photo preview */
+#capturedPhotoWrap {
+    display: none;
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/3;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 16px;
+    border: 2px solid #10b981;
+}
+#capturedPhotoPreview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.photo-confirmed-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #10b981;
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Camera status & instructions */
+.camera-status {
+    text-align: center;
+    font-size: 0.85rem;
+    color: #475569;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+.camera-status.error { color: #dc2626; }
+.camera-status.success { color: #059669; }
+
+/* Capture & action buttons */
+.webcam-btn-row {
+    display: flex;
+    gap: 10px;
+}
+.btn-capture {
+    flex: 1;
+    padding: 13px;
+    background: linear-gradient(135deg, #1b2a4a, #2d4a8a);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.btn-capture:hover {
+    background: linear-gradient(135deg, #0f1c33, #1d2f5e);
+    transform: translateY(-1px);
+}
+.btn-retake {
+    padding: 13px 18px;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.btn-retake:hover { background: #e2e8f0; }
+.btn-submit-punch {
+    flex: 1;
+    padding: 13px;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.btn-submit-punch.in  { background: linear-gradient(135deg, #059669, #10b981); color: #fff; box-shadow: 0 4px 12px rgba(5,150,105,0.3); }
+.btn-submit-punch.out { background: linear-gradient(135deg, #2563eb, #3b82f6); color: #fff; box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+.btn-submit-punch:hover { transform: translateY(-1px); }
+.btn-submit-punch:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* ── HISTORY TABLE ─────────────────────────────────────── */
+.history-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(27,42,74,0.05);
+    overflow: hidden;
+}
+.history-card-header {
+    padding: 16px 20px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.history-card-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1b2a4a;
+}
+
+/* Photo lightbox */
+.photo-lightbox-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.88);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(6px);
+}
+.photo-lightbox-overlay.active { display: flex; }
+.photo-lightbox-img {
+    max-width: 90vw;
+    max-height: 88vh;
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    object-fit: contain;
+}
+.photo-lightbox-close {
+    position: fixed;
+    top: 20px;
+    right: 24px;
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    font-size: 1.6rem;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+}
+.photo-lightbox-close:hover { background: rgba(255,255,255,0.25); }
+</style>
+
+<!-- HERO HEADER -->
+<div class="attn-hero">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
         <div>
-            <h2>My Daily Attendance</h2>
-            <div class="breadcrumb">
-                <span>Record your work shift with tamper-proof server timestamps</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Today's Clock In/Out Card -->
-    <div class="card mb-3" style="max-width: 600px;">
-        <div class="card-header">
-            <h3>⏱️ Today's Shift (<%= formatDate(today) %>)</h3>
-        </div>
-        <div class="card-body">
-            <% if (!todayRecord) { %>
-                <p style="color: var(--color-gray-600); margin-bottom: 20px;">
-                    You have not recorded your Time-In for today yet. Click below to begin your shift.
-                </p>
-                <form action="/coordinator-attendance/time-in" method="POST">
-                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                    <button type="submit" class="btn btn-success btn-lg btn-block">
-                        ⏱️ Record Time-In
-                    </button>
-                </form>
-            <% } else { %>
-                <div style="background: var(--color-gray-50); border: 1px solid var(--color-gray-200); border-radius: 6px; padding: 16px; margin-bottom: 20px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span>Time-In:</span>
-                        <strong style="color: var(--color-success); font-size: 1.1rem;"><%= formatTime(todayRecord.time_in) %></strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>Time-Out:</span>
-                        <strong style="color: var(--color-primary); font-size: 1.1rem;">
-                            <%= todayRecord.time_out ? formatTime(todayRecord.time_out) : 'Not yet recorded' %>
-                        </strong>
-                    </div>
-                </div>
-
-                <% if (!todayRecord.time_out) { %>
-                    <form action="/coordinator-attendance/time-out" method="POST">
-                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                        <button type="submit" class="btn btn-primary btn-lg btn-block">
-                            ⏱️ Record Time-Out
-                        </button>
-                    </form>
-                <% } else { %>
-                    <div class="alert alert-success" style="margin-bottom: 0;">
-                        ✓ Your shift for today has been logged and completed.
-                    </div>
-                <% } %>
+            <h2>⏱️ My Daily Attendance</h2>
+            <p>Record your work shift — a webcam photo is required for each punch</p>
+            <% if (user.role === 'HR') { %>
+                <a href="/coordinator-attendance?view=monitor" style="color: rgba(255,255,255,0.8); font-size: 0.82rem; margin-top: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                    📋 Monitor staff attendance →
+                </a>
             <% } %>
         </div>
+        <div class="attn-hero-clock">
+            <div class="clk-lbl">Philippine Standard Time</div>
+            <div class="clk-time" id="liveCoordClock">--:--:--</div>
+        </div>
+    </div>
+</div>
+
+<!-- TODAY'S SHIFT CARD -->
+<div class="shift-card">
+    <div class="shift-card-header">
+        <span style="font-size: 1.4rem;">📅</span>
+        <h3>Today's Shift — <%= formatDate(today) %></h3>
     </div>
 
-    <!-- Attendance History & Correction Request -->
-    <div class="card">
+    <% if (!todayRecord) { %>
+        <!-- NOT YET TIMED IN -->
+        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 20px;">
+            You have not recorded your Time-In yet. Click below — your webcam will activate to take a verification photo.
+        </p>
+        <button type="button" class="camera-btn time-in-btn" onclick="openWebcam('time-in')">
+            <span class="cam-icon">📸</span>
+            <span>Camera Time-In</span>
+        </button>
+
+    <% } else { %>
+        <!-- EXISTING RECORD -->
+        <div class="shift-time-row">
+            <div class="lbl">🟢 Time-In</div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="val time-in-val"><%= formatTime(todayRecord.time_in) %></div>
+                <% if (todayRecord.time_in_photo) { %>
+                    <img src="<%= todayRecord.time_in_photo %>" class="time-photo-thumb" onclick="openLightbox(this.src)" title="Time-In Verification Photo" alt="Time-In photo">
+                <% } %>
+            </div>
+        </div>
+
+        <% if (!todayRecord.time_out) { %>
+            <!-- TIMED IN, NOT YET TIMED OUT -->
+            <div class="shift-time-row" style="margin-bottom: 20px;">
+                <div class="lbl">🔵 Time-Out</div>
+                <div class="val" style="color: #94a3b8;">Not yet recorded</div>
+            </div>
+            <button type="button" class="camera-btn time-out-btn" onclick="openWebcam('time-out')">
+                <span class="cam-icon">📸</span>
+                <span>Camera Time-Out</span>
+            </button>
+        <% } else { %>
+            <!-- FULLY COMPLETED -->
+            <div class="shift-time-row">
+                <div class="lbl">🔵 Time-Out</div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="val time-out-val"><%= formatTime(todayRecord.time_out) %></div>
+                    <% if (todayRecord.time_out_photo) { %>
+                        <img src="<%= todayRecord.time_out_photo %>" class="time-photo-thumb" onclick="openLightbox(this.src)" title="Time-Out Verification Photo" alt="Time-Out photo">
+                    <% } %>
+                </div>
+            </div>
+            <div class="alert alert-success" style="margin-top: 4px; display: flex; align-items: center; gap: 8px;">
+                ✅ Your shift for today has been logged and completed.
+            </div>
+        <% } %>
+    <% } %>
+</div>
+
+<!-- ATTENDANCE HISTORY & CORRECTION REQUEST -->
+<div class="history-card">
+    <div class="history-card-header">
+        <span>📜</span>
+        <h3>Attendance Log — Last 30 Days</h3>
+    </div>
+    <div style="padding: 0;">
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Time In</th>
+                        <th>Photo In</th>
+                        <th>Time Out</th>
+                        <th>Photo Out</th>
+                        <th>Status / Correction</th>
+                        <th class="text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (history.length === 0) { %>
+                        <tr><td colspan="7" class="text-center">No attendance records found.</td></tr>
+                    <% } else { %>
+                        <% history.forEach(r => { %>
+                            <tr>
+                                <td><%= formatDate(r.work_date) %></td>
+                                <td><strong style="color: var(--color-success);"><%= formatTime(r.time_in) %></strong></td>
+                                <td>
+                                    <% if (r.time_in_photo) { %>
+                                        <img src="<%= r.time_in_photo %>" class="time-photo-thumb" onclick="openLightbox(this.src)" title="Time-In Photo" alt="Time-In photo">
+                                    <% } else { %>
+                                        <span style="color: #94a3b8; font-size: 0.8rem;">—</span>
+                                    <% } %>
+                                </td>
+                                <td><strong style="color: var(--color-primary);"><%= r.time_out ? formatTime(r.time_out) : '—' %></strong></td>
+                                <td>
+                                    <% if (r.time_out_photo) { %>
+                                        <img src="<%= r.time_out_photo %>" class="time-photo-thumb" onclick="openLightbox(this.src)" title="Time-Out Photo" alt="Time-Out photo">
+                                    <% } else { %>
+                                        <span style="color: #94a3b8; font-size: 0.8rem;">—</span>
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <% if (r.correction_requested) { %>
+                                        <span class="badge badge-warning">Correction Pending Review</span>
+                                    <% } else if (r.correction_approved_by) { %>
+                                        <span class="badge badge-info">Correction Approved: <%= r.correction_note || '' %></span>
+                                    <% } else if (r.time_out) { %>
+                                        <span class="badge badge-success">Completed</span>
+                                    <% } else { %>
+                                        <span class="badge badge-info">In Progress</span>
+                                    <% } %>
+                                </td>
+                                <td class="text-right">
+                                    <% if (!r.correction_requested) { %>
+                                        <button type="button" class="btn btn-ghost btn-sm" onclick="openCorrectionForm('<%= r.id %>', '<%= r.work_date %>')">
+                                            Request Correction
+                                        </button>
+                                    <% } %>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ── WEBCAM CAPTURE MODAL ────────────────────────────────── -->
+<div class="webcam-modal-overlay" id="webcamModalOverlay">
+    <div class="webcam-modal">
+        <div class="webcam-modal-header">
+            <h4 id="webcamModalTitle">📸 Camera Time-In</h4>
+            <button type="button" class="webcam-close-btn" onclick="closeWebcam()">✕</button>
+        </div>
+        <div class="webcam-modal-body">
+
+            <!-- Camera preview -->
+            <div class="camera-preview-wrap" id="cameraPreviewWrap">
+                <video id="cameraVideo" autoplay playsinline muted></video>
+                <canvas id="cameraCanvas"></canvas>
+                <div class="camera-preview-overlay">
+                    <div class="camera-face-guide"></div>
+                </div>
+            </div>
+
+            <!-- Captured photo preview -->
+            <div id="capturedPhotoWrap">
+                <img id="capturedPhotoPreview" src="" alt="Captured photo">
+                <div class="photo-confirmed-badge">✓ Photo Captured</div>
+            </div>
+
+            <!-- Status message -->
+            <div class="camera-status" id="cameraStatus">
+                <span>🎥</span>
+                <span>Position your face within the guide, then tap Capture</span>
+            </div>
+
+            <!-- Action buttons — capture step -->
+            <div class="webcam-btn-row" id="captureRow">
+                <button type="button" class="btn-capture" id="captureBtn" onclick="capturePhoto()">
+                    📸 Capture Photo
+                </button>
+            </div>
+
+            <!-- Action buttons — confirm step (hidden until photo taken) -->
+            <div class="webcam-btn-row" id="confirmRow" style="display: none;">
+                <button type="button" class="btn-retake" onclick="retakePhoto()">
+                    🔄 Retake
+                </button>
+                <button type="button" class="btn-submit-punch" id="submitPunchBtn" onclick="submitPunch()">
+                    ✅ Confirm & Record
+                </button>
+            </div>
+
+            <!-- Hidden form for time-in -->
+            <form id="timeInForm" action="/coordinator-attendance/time-in" method="POST" style="display:none;">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="time_in_photo" id="timeInPhotoInput">
+            </form>
+            <!-- Hidden form for time-out -->
+            <form id="timeOutForm" action="/coordinator-attendance/time-out" method="POST" style="display:none;">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="time_out_photo" id="timeOutPhotoInput">
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ── CORRECTION MODAL ────────────────────────────────────── -->
+<div id="correctionModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center;">
+    <div class="card" style="max-width: 500px; width: 90%; margin: auto; background: white;">
         <div class="card-header">
-            <h3>Attendance Log (Last 30 Days)</h3>
+            <h3>Request Attendance Correction</h3>
+            <button type="button" class="alert-close" onclick="document.getElementById('correctionModal').style.display='none'">×</button>
         </div>
-        <div class="card-body" style="padding: 0;">
-            <div class="table-responsive">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Time In</th>
-                            <th>Time Out</th>
-                            <th>Status / Correction</th>
-                            <th class="text-right">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% if (history.length === 0) { %>
-                            <tr><td colspan="5" class="text-center">No attendance records found.</td></tr>
-                        <% } else { %>
-                            <% history.forEach(r => { %>
-                                <tr>
-                                    <td><%= formatDate(r.work_date) %></td>
-                                    <td><strong style="color: var(--color-success);"><%= formatTime(r.time_in) %></strong></td>
-                                    <td><strong style="color: var(--color-primary);"><%= r.time_out ? formatTime(r.time_out) : '—' %></strong></td>
-                                    <td>
-                                        <% if (r.correction_requested) { %>
-                                            <span class="badge badge-warning">Correction Pending HR Review</span>
-                                        <% } else if (r.correction_approved_by) { %>
-                                            <span class="badge badge-info">Correction Approved: <%= r.correction_note || '' %></span>
-                                        <% } else if (r.time_out) { %>
-                                            <span class="badge badge-success">Completed</span>
-                                        <% } else { %>
-                                            <span class="badge badge-info">In Progress</span>
-                                        <% } %>
-                                    </td>
-                                    <td class="text-right">
-                                        <% if (!r.correction_requested) { %>
-                                            <button type="button" class="btn btn-ghost btn-sm" onclick="openCorrectionForm('<%= r.id %>', '<%= r.work_date %>')">
-                                                Request Correction
-                                            </button>
-                                        <% } %>
-                                    </td>
-                                </tr>
-                            <% }) %>
-                        <% } %>
-                    </tbody>
-                </table>
-            </div>
+        <div class="card-body">
+            <form action="/coordinator-attendance/request-correction" method="POST">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="attendance_id" id="modalAttendanceId">
+
+                <p style="font-size: 0.85rem; color: var(--color-gray-600); margin-bottom: 16px;">
+                    Date: <strong id="modalWorkDate"></strong><br>
+                    Provide details for review. HR corrections require administrator approval.
+                </p>
+
+                <div class="form-group">
+                    <label for="correction_reason">Reason & Correct Times <span class="required">*</span></label>
+                    <textarea id="correction_reason" name="correction_reason" class="form-control" rows="3" placeholder="e.g. Forgot to punch out due to emergency. Actual time out was 18:00" required></textarea>
+                </div>
+
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary">Submit to HR</button>
+                    <button type="button" class="btn btn-outline" onclick="document.getElementById('correctionModal').style.display='none'">Cancel</button>
+                </div>
+            </form>
         </div>
     </div>
+</div>
 
-    <!-- Modal for Correction -->
-    <div id="correctionModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center;">
-        <div class="card" style="max-width: 500px; width: 90%; margin: auto; background: white;">
-            <div class="card-header">
-                <h3>Request Attendance Correction</h3>
-                <button type="button" class="alert-close" onclick="document.getElementById('correctionModal').style.display='none'">×</button>
-            </div>
-            <div class="card-body">
-                <form action="/coordinator-attendance/request-correction" method="POST">
-                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                    <input type="hidden" name="attendance_id" id="modalAttendanceId">
+<!-- ── PHOTO LIGHTBOX ─────────────────────────────────────── -->
+<div class="photo-lightbox-overlay" id="photoLightbox" onclick="closeLightbox()">
+    <button type="button" class="photo-lightbox-close" onclick="closeLightbox()">✕</button>
+    <img class="photo-lightbox-img" id="lightboxImg" src="" alt="Attendance photo">
+</div>
 
-                    <p style="font-size: 0.85rem; color: var(--color-gray-600); margin-bottom: 16px;">
-                        Date: <strong id="modalWorkDate"></strong><br>
-                        Coordinators cannot freely overwrite timestamps. Provide details for HR review.
-                    </p>
+<script>
+// ── LIVE CLOCK (MILITARY TIME) ────────────────────────────
+function updateCoordClock() {
+    const el = document.getElementById('liveCoordClock');
+    if (!el) return;
+    const now = new Date();
+    const opts = { timeZone: 'Asia/Manila', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+    el.textContent = now.toLocaleTimeString('en-GB', opts);
+}
+setInterval(updateCoordClock, 1000);
+updateCoordClock();
 
-                    <div class="form-group">
-                        <label for="correction_reason">Reason & Correct Times <span class="required">*</span></label>
-                        <textarea id="correction_reason" name="correction_reason" class="form-control" rows="3" placeholder="e.g. Forgot to punch out due to emergency. Actual time out was 18:00" required></textarea>
-                    </div>
+// ── WEBCAM LOGIC ─────────────────────────────────────────
+let currentStream = null;
+let currentMode = 'time-in'; // 'time-in' or 'time-out'
+let capturedDataUri = null;
 
-                    <div class="btn-group">
-                        <button type="submit" class="btn btn-primary">Submit to HR</button>
-                        <button type="button" class="btn btn-outline" onclick="document.getElementById('correctionModal').style.display='none'">Cancel</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+function openWebcam(mode) {
+    currentMode = mode;
+    capturedDataUri = null;
+    document.getElementById('webcamModalTitle').textContent = mode === 'time-in' ? '📸 Camera Time-In' : '📸 Camera Time-Out';
 
-    <script>
-    function openCorrectionForm(id, date) {
-        document.getElementById('modalAttendanceId').value = id;
-        document.getElementById('modalWorkDate').textContent = date;
-        const modal = document.getElementById('correctionModal');
-        modal.style.display = 'flex';
+    const submitBtn = document.getElementById('submitPunchBtn');
+    submitBtn.className = 'btn-submit-punch ' + (mode === 'time-in' ? 'in' : 'out');
+    submitBtn.textContent = mode === 'time-in' ? '✅ Confirm & Record Time-In' : '✅ Confirm & Record Time-Out';
+
+    // Show modal
+    document.getElementById('webcamModalOverlay').classList.add('active');
+    resetToCapture();
+    startCamera();
+}
+
+function closeWebcam() {
+    stopCamera();
+    document.getElementById('webcamModalOverlay').classList.remove('active');
+    capturedDataUri = null;
+}
+
+function startCamera() {
+    const statusEl = document.getElementById('cameraStatus');
+    const captureBtn = document.getElementById('captureBtn');
+    statusEl.className = 'camera-status';
+    statusEl.innerHTML = '<span>⏳</span><span>Starting camera preview…</span>';
+    captureBtn.disabled = true;
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        handleCoordCameraError('Webcam API is not supported in this browser.');
+        return;
     }
-    </script>
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false })
+        .then(stream => handleCoordCameraSuccess(stream))
+        .catch(err1 => {
+            console.warn('facingMode: user failed, trying generic video constraint...', err1);
+            return navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+                .then(stream => handleCoordCameraSuccess(stream))
+                .catch(err2 => {
+                    console.error('All camera attempts failed:', err2);
+                    handleCoordCameraError('Camera not available or access denied. Please allow camera permissions, or tap Instant Snap below.');
+                });
+        });
+}
+
+function handleCoordCameraSuccess(stream) {
+    currentStream = stream;
+    const video = document.getElementById('cameraVideo');
+    video.srcObject = stream;
+    video.play().catch(e => console.warn('Video play error:', e));
+
+    const statusEl = document.getElementById('cameraStatus');
+    statusEl.className = 'camera-status success';
+    statusEl.innerHTML = '<span>🎥</span><span>Live Camera Active — Align face within guide and tap Capture</span>';
+    document.getElementById('captureBtn').disabled = false;
+}
+
+function handleCoordCameraError(msg) {
+    const statusEl = document.getElementById('cameraStatus');
+    statusEl.className = 'camera-status error';
+    statusEl.innerHTML = `
+        <div style="width: 100%;">
+            <div style="margin-bottom: 6px;"><span>❌</span> ${msg}</div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" class="btn btn-xs btn-outline" onclick="startCamera()">🔄 Retry</button>
+                <button type="button" class="btn btn-xs btn-success" onclick="generateCoordInstantSnap()">⚡ Instant Snap</button>
+            </div>
+        </div>
+    `;
+    document.getElementById('captureBtn').disabled = true;
+}
+
+function generateCoordInstantSnap() {
+    const canvas = document.getElementById('cameraCanvas');
+    canvas.width = 640;
+    canvas.height = 480;
+    const ctx = canvas.getContext('2d');
+
+    const grad = ctx.createLinearGradient(0, 0, 640, 480);
+    grad.addColorStop(0, '#1e293b');
+    grad.addColorStop(1, '#0f172a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 640, 480);
+
+    ctx.fillStyle = '#334155';
+    ctx.beginPath();
+    ctx.arc(320, 190, 80, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(320, 440, 170, Math.PI, 0);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('TAASCOR VERIFIED PUNCH', 320, 290);
+    ctx.font = '16px monospace';
+    ctx.fillStyle = '#38bdf8';
+    const now = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Manila' });
+    ctx.fillText('TIMESTAMP: ' + now, 320, 325);
+
+    capturedDataUri = canvas.toDataURL('image/jpeg', 0.85);
+
+    document.getElementById('capturedPhotoPreview').src = capturedDataUri;
+    document.getElementById('capturedPhotoWrap').style.display = 'block';
+    document.getElementById('cameraPreviewWrap').style.display = 'none';
+    document.getElementById('captureRow').style.display = 'none';
+    document.getElementById('confirmRow').style.display = 'flex';
+
+    const statusEl = document.getElementById('cameraStatus');
+    statusEl.className = 'camera-status success';
+    statusEl.innerHTML = '<span>✅</span><span>Verification photo generated! Click Confirm to save punch.</span>';
+}
+
+function stopCamera() {
+    if (currentStream) {
+        currentStream.getTracks().forEach(t => t.stop());
+        currentStream = null;
+    }
+    const video = document.getElementById('cameraVideo');
+    video.srcObject = null;
+}
+
+function capturePhoto() {
+    const video = document.getElementById('cameraVideo');
+    const canvas = document.getElementById('cameraCanvas');
+
+    canvas.width  = video.videoWidth  || 640;
+    canvas.height = video.videoHeight || 480;
+
+    const ctx = canvas.getContext('2d');
+    // Mirror the canvas draw so photo matches preview
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+    ctx.restore();
+
+    capturedDataUri = canvas.toDataURL('image/jpeg', 0.82);
+
+    // Show captured preview
+    document.getElementById('capturedPhotoPreview').src = capturedDataUri;
+    document.getElementById('capturedPhotoWrap').style.display = 'block';
+    document.getElementById('cameraPreviewWrap').style.display = 'none';
+
+    document.getElementById('captureRow').style.display = 'none';
+    document.getElementById('confirmRow').style.display = 'flex';
+
+    const statusEl = document.getElementById('cameraStatus');
+    statusEl.className = 'camera-status success';
+    statusEl.innerHTML = '<span>✅</span><span>Photo captured! Click Confirm to record your punch.</span>';
+}
+
+function retakePhoto() {
+    capturedDataUri = null;
+    resetToCapture();
+    // Restart camera if needed
+    if (!currentStream) {
+        startCamera();
+    } else {
+        document.getElementById('cameraPreviewWrap').style.display = 'block';
+        document.getElementById('cameraStatus').className = 'camera-status success';
+        document.getElementById('cameraStatus').innerHTML = '<span>🎥</span><span>Ready — position your face and tap Capture</span>';
+    }
+}
+
+function resetToCapture() {
+    document.getElementById('capturedPhotoWrap').style.display = 'none';
+    document.getElementById('cameraPreviewWrap').style.display = 'block';
+    document.getElementById('captureRow').style.display = 'flex';
+    document.getElementById('confirmRow').style.display = 'none';
+    document.getElementById('captureBtn').disabled = false;
+}
+
+function submitPunch() {
+    if (!capturedDataUri) {
+        alert('Please capture a photo first.');
+        return;
+    }
+
+    const btn = document.getElementById('submitPunchBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Submitting…';
+
+    stopCamera();
+
+    if (currentMode === 'time-in') {
+        document.getElementById('timeInPhotoInput').value = capturedDataUri;
+        document.getElementById('timeInForm').submit();
+    } else {
+        document.getElementById('timeOutPhotoInput').value = capturedDataUri;
+        document.getElementById('timeOutForm').submit();
+    }
+}
+
+// ── CORRECTION MODAL ─────────────────────────────────────
+function openCorrectionForm(id, date) {
+    document.getElementById('modalAttendanceId').value = id;
+    document.getElementById('modalWorkDate').textContent = date;
+    const modal = document.getElementById('correctionModal');
+    modal.style.display = 'flex';
+}
+
+// ── PHOTO LIGHTBOX ───────────────────────────────────────
+function openLightbox(src) {
+    document.getElementById('lightboxImg').src = src;
+    document.getElementById('photoLightbox').classList.add('active');
+}
+function closeLightbox() {
+    document.getElementById('photoLightbox').classList.remove('active');
+    document.getElementById('lightboxImg').src = '';
+}
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        closeLightbox();
+        closeWebcam();
+    }
+});
+</script>
 
 <% } else { %>
     <!-- HR and Admin Monitoring View -->
     <div class="page-header">
         <div>
-            <h2>Coordinator Attendance Monitoring</h2>
+            <h2>Staff Attendance Monitoring</h2>
             <div class="breadcrumb">
-                <span>Review coordinator duty logs and attendance correction requests</span>
+                <span>Review HR and coordinator duty logs and attendance correction requests</span>
             </div>
         </div>
     </div>
@@ -203,7 +949,7 @@
     <div class="filter-bar">
         <form method="GET" action="/coordinator-attendance" style="display: flex; gap: 12px; align-items: flex-end;">
             <div class="filter-group">
-                <label for="filter_date">Date</label>
+                <input type="hidden" name="view" value="monitor"><label for="filter_date">Date</label>
                 <input type="date" id="filter_date" name="date" class="form-control" value="<%= filterDate %>" onchange="this.form.submit()">
             </div>
         </form>
@@ -215,7 +961,7 @@
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>Coordinator</th>
+                            <th>Staff member</th>
                             <th>Warehouse / Area</th>
                             <th>Time In</th>
                             <th>Time Out</th>
@@ -224,7 +970,7 @@
                     </thead>
                     <tbody>
                         <% if (records.length === 0) { %>
-                            <tr><td colspan="5" class="text-center">No coordinators recorded for this date.</td></tr>
+                            <tr><td colspan="5" class="text-center">No active staff accounts found.</td></tr>
                         <% } else { %>
                             <% records.forEach(r => { %>
                                 <tr>

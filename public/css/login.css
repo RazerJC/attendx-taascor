@@ -1,0 +1,426 @@
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    text-decoration: none;
+    list-style: none;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #dbe4f8;
+    background-image: url('/images/login-bg.svg');
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center;
+    overflow-x: hidden;
+    padding: 20px;
+}
+
+.container {
+    position: relative;
+    width: 960px;
+    max-width: 100%;
+    min-height: 600px;
+    background: #fff;
+    margin: 20px;
+    border-radius: 30px;
+    box-shadow: 0 0 35px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+}
+
+.container h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 4px 0 14px;
+}
+
+.container .greet {
+    color: #fff;
+    font-size: 34px;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.container p {
+    font-size: 14.5px;
+    line-height: 22px;
+    margin: 6px 0 14px;
+}
+
+.container .brand-logo {
+    width: 320px;
+    max-width: 90%;
+    height: auto;
+    margin-bottom: 6px;
+    object-fit: contain;
+}
+
+/* Form Container */
+.form-container {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    width: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.6s ease-in-out;
+}
+
+.form-container form {
+    width: 100%;
+    height: 100%;
+    padding: 30px 42px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: #fff;
+}
+
+.sign-in {
+    left: 0;
+    width: 50%;
+    z-index: 2;
+}
+
+.container.active .sign-in {
+    transform: translateX(100%);
+}
+
+.sign-up {
+    left: 0;
+    width: 50%;
+    opacity: 0;
+    z-index: 1;
+}
+
+.container.active .sign-up {
+    transform: translateX(100%);
+    opacity: 1;
+    z-index: 5;
+    animation: move 0.6s;
+}
+
+@keyframes move {
+    0%, 49.99% {
+        opacity: 0;
+        z-index: 1;
+    }
+    50%, 100% {
+        opacity: 1;
+        z-index: 5;
+    }
+}
+
+/* Inputs styling matching TAASCOR HRIS */
+.input-box {
+    position: relative;
+    width: 100%;
+    margin: 6px 0;
+}
+
+.input-box input {
+    width: 100%;
+    padding: 12px 50px 12px 18px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    outline: none;
+    font-size: 14.5px;
+    color: #333;
+    font-weight: 500;
+    transition: all 0.25s ease;
+}
+
+.input-box input:focus {
+    background: #fff;
+    border-color: #27489B;
+    box-shadow: 0 0 0 3px rgba(39, 72, 155, 0.15);
+}
+
+.input-box input::placeholder {
+    color: #888;
+    font-weight: 400;
+}
+
+.input-box i {
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 22px;
+    color: #777;
+    pointer-events: none;
+}
+
+/* Options / Checkbox */
+.options-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    margin: 6px 0 14px;
+}
+
+.options-row input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #27489B;
+}
+
+.options-row label {
+    font-size: 13.5px;
+    color: #475569;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Buttons with TAASCOR Yellow Hover */
+.btn {
+    width: 100%;
+    height: 46px;
+    background: #27489B;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(39, 72, 155, 0.2);
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+    color: #fff;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn:hover,
+.btn:focus {
+    background: #ffdc13;
+    color: #27489B;
+    box-shadow: 0 4px 14px rgba(255, 220, 19, 0.45);
+}
+
+.btn:active {
+    transform: translateY(1px);
+}
+
+.forgot-link {
+    margin-top: 12px;
+}
+
+.forgot-link a {
+    font-size: 13.5px;
+    color: #333;
+    transition: color 0.2s ease;
+}
+
+.forgot-link a:hover {
+    color: #27489B;
+    text-decoration: underline;
+}
+
+/* Sliding Toggle Overlay Container */
+.toggle-container {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 50%;
+    height: 100%;
+    overflow: hidden;
+    transition: all 0.6s ease-in-out;
+    border-radius: 150px 0 0 100px;
+    z-index: 1000;
+}
+
+.container.active .toggle-container {
+    transform: translateX(-100%);
+    border-radius: 0 150px 100px 0;
+}
+
+.toggle {
+    background: #27489B;
+    background: linear-gradient(135deg, #27489B 0%, #1e3a82 100%);
+    color: #fff;
+    position: relative;
+    left: -100%;
+    height: 100%;
+    width: 200%;
+    transform: translateX(0);
+    transition: all 0.6s ease-in-out;
+}
+
+.container.active .toggle {
+    transform: translateX(50%);
+}
+
+.toggle-panel {
+    position: absolute;
+    width: 50%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 0 40px;
+    text-align: center;
+    top: 0;
+    transform: translateX(0);
+    transition: all 0.6s ease-in-out;
+}
+
+.toggle-panel p {
+    color: rgba(255, 255, 255, 0.92);
+    margin-bottom: 22px;
+    font-size: 14.5px;
+}
+
+.toggle-left {
+    transform: translateX(-200%);
+}
+
+.container.active .toggle-left {
+    transform: translateX(0);
+}
+
+.toggle-right {
+    right: 0;
+    transform: translateX(0);
+}
+
+.container.active .toggle-right {
+    transform: translateX(200%);
+}
+
+.toggle-panel .btn-toggle {
+    width: auto;
+    min-width: 150px;
+    height: 44px;
+    padding: 0 30px;
+    background: transparent;
+    border: 2px solid #fff;
+    border-radius: 8px;
+    box-shadow: none;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.toggle-panel .btn-toggle:hover {
+    background: #ffdc13;
+    border-color: #ffdc13;
+    color: #27489B;
+}
+
+/* Alert styles */
+.auth-alert {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 10px;
+    text-align: left;
+}
+
+.auth-alert-error {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.auth-alert-success {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.auth-alert-warning {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
+.form-help {
+    font-size: 11.5px;
+    color: #64748b;
+    margin-top: -2px;
+    margin-bottom: 6px;
+    text-align: left;
+    width: 100%;
+}
+
+/* Mobile Responsiveness */
+@media screen and (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    .container {
+        min-height: auto;
+        border-radius: 20px;
+        margin: 10px 0;
+        width: 100%;
+    }
+
+    .form-container {
+        position: relative;
+        width: 100%;
+        height: auto;
+        opacity: 1;
+        transform: none !important;
+    }
+
+    .sign-up {
+        display: none;
+    }
+
+    .container.active .sign-in {
+        display: none;
+    }
+
+    .container.active .sign-up {
+        display: flex;
+        opacity: 1;
+        animation: none;
+    }
+
+    .toggle-container {
+        display: none;
+    }
+
+    .mobile-toggle {
+        display: block !important;
+        margin-top: 14px;
+        font-size: 13.5px;
+        color: #475569;
+    }
+
+    .mobile-toggle a {
+        color: #27489B;
+        font-weight: 600;
+        text-decoration: underline;
+        margin-left: 4px;
+        cursor: pointer;
+    }
+}
+
+.mobile-toggle {
+    display: none;
+}

@@ -17,6 +17,13 @@
             <form action="<%= isEdit ? '/employees/' + employee.id + '/edit' : '/employees' %>" method="POST">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
+                <div class="form-group">
+                    <label for="employee_id">Employee ID <span class="required">*</span></label>
+                    <input type="text" id="employee_id" name="employee_id" class="form-control"
+                           value="<%= employee ? employee.employee_id : '' %>" placeholder="Enter employee ID" required <%= isEdit ? 'readonly' : '' %>>
+                    <% if (!isEdit) { %><div class="form-help">The coordinator enters the employee's official ID. It must be unique.</div><% } %>
+                </div>
+
                 <div class="form-row">
                     <div class="form-group">
                         <label for="first_name">First Name <span class="required">*</span></label>
@@ -49,13 +56,15 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="position_id">Designated Position</label>
-                        <select id="position_id" name="position_id" class="form-control">
-                            <option value="">Select Position</option>
+                        <label for="position_title">Designated Position</label>
+                        <input type="text" id="position_title" name="position_title" class="form-control" list="position-options"
+                               value="<%= employee && employee.position_title ? employee.position_title : '' %>" placeholder="Enter or select position">
+                        <datalist id="position-options">
                             <% positions.forEach(p => { %>
-                                <option value="<%= p.id %>" <%= (employee && employee.position_id === p.id) ? 'selected' : '' %>><%= p.title %></option>
+                                <option value="<%= p.title %>"></option>
                             <% }) %>
-                        </select>
+                        </datalist>
+                        <div class="form-help">Type a new position if it is not listed.</div>
                     </div>
                 </div>
 

@@ -19,16 +19,37 @@
 
                 <div class="form-group">
                     <label>Select Employees <span class="required">*</span></label>
-                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                        <button type="button" class="btn btn-ghost btn-sm" onclick="toggleAllEmployees(true)">Select All</button>
-                        <button type="button" class="btn btn-ghost btn-sm" onclick="toggleAllEmployees(false)">Deselect All</button>
+                    <%
+                        const scheduleDepartments = new Map();
+                        employees.forEach(employee => {
+                            const key = JSON.stringify([employee.area_id, employee.dept_name || '']);
+                            if (!scheduleDepartments.has(key)) {
+                                const area = areas.find(area => area.id === employee.area_id);
+                                scheduleDepartments.set(key, { label: (employee.dept_name || 'Unassigned') + (area ? ' · ' + area.name : ''), count: 0 });
+                            }
+                            scheduleDepartments.get(key).count++;
+                        });
+                    %>
+                    <label for="scheduleDepartment">Department</label>
+                    <select id="scheduleDepartment" class="form-control" aria-describedby="scheduleSelectionHelp">
+                        <option value="">All departments (<%= employees.length %>)</option>
+                        <% scheduleDepartments.forEach((department, key) => { %>
+                            <option value="<%= key %>"><%= department.label %> (<%= department.count %>)</option>
+                        <% }) %>
+                    </select>
+                    <p id="scheduleSelectionHelp" class="form-help">Choose a department, then select its employees. Selections from other departments stay included.</p>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0;">
+                        <button type="button" id="selectDepartmentEmployees" class="btn btn-ghost btn-sm" onclick="toggleAllEmployees(true)">Select All</button>
+                        <button type="button" id="deselectDepartmentEmployees" class="btn btn-ghost btn-sm" onclick="toggleAllEmployees(false)">Deselect All</button>
+                        <button type="button" id="clearScheduleSelection" class="btn btn-ghost btn-sm">Clear all selections</button>
                     </div>
+                    <p id="scheduleSelectionCount" class="form-help" role="status" aria-live="polite" style="margin-bottom: 8px;">0 selected · <%= employees.length %> shown</p>
                     <div style="max-height: 180px; overflow-y: auto; border: 1px solid var(--color-gray-300); border-radius: 6px; padding: 10px; background: white;">
                         <% if (employees.length === 0) { %>
                             <p class="text-muted" style="padding: 8px;">No active employees available to schedule.</p>
                         <% } else { %>
                             <% employees.forEach(e => { %>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer;">
+                                <label class="schedule-employee-row" data-department="<%= JSON.stringify([e.area_id, e.dept_name || '']) %>" style="display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer;">
                                     <input type="checkbox" name="employee_ids" value="<%= e.id %>" class="emp-checkbox">
                                     <span><strong><%= e.full_name %></strong> (<%= e.employee_id %>)<% if (e.dept_name) { %> • <span class="badge" style="background: rgba(37, 99, 235, 0.08); color: var(--color-primary); font-size: 0.7rem;"><%= e.dept_name %></span><% } %></span>
                                 </label>
@@ -92,8 +113,34 @@
 
 <script>
 function toggleAllEmployees(select) {
-    document.querySelectorAll('.emp-checkbox').forEach(cb => cb.checked = select);
+    document.querySelectorAll('.schedule-employee-row:not([hidden]) .emp-checkbox').forEach(cb => cb.checked = select);
+    updateScheduleSelection();
+    document.getElementById('start_date').dispatchEvent(new Event('change', { bubbles: true }));
 }
+
+function updateScheduleSelection() {
+    const rows = [...document.querySelectorAll('.schedule-employee-row')];
+    const selected = rows.filter(row => row.querySelector('.emp-checkbox').checked);
+    const visible = rows.filter(row => !row.hidden);
+    const hiddenSelected = selected.filter(row => row.hidden).length;
+    document.getElementById('scheduleSelectionCount').textContent = `${selected.length} selected · ${visible.length} shown${hiddenSelected ? ` · ${hiddenSelected} selected in other departments` : ''}`;
+}
+
+document.getElementById('scheduleDepartment').addEventListener('change', event => {
+    const department = event.target.value;
+    document.querySelectorAll('.schedule-employee-row').forEach(row => {
+        row.hidden = Boolean(department && row.dataset.department !== department);
+    });
+    document.getElementById('selectDepartmentEmployees').textContent = department ? 'Select department' : 'Select All';
+    document.getElementById('deselectDepartmentEmployees').textContent = department ? 'Deselect department' : 'Deselect All';
+    updateScheduleSelection();
+});
+document.querySelectorAll('.emp-checkbox').forEach(checkbox => checkbox.addEventListener('change', updateScheduleSelection));
+document.getElementById('clearScheduleSelection').addEventListener('click', () => {
+    document.querySelectorAll('.emp-checkbox').forEach(checkbox => checkbox.checked = false);
+    updateScheduleSelection();
+    document.getElementById('conflictAlert').classList.add('hidden');
+});
 
 function toggleRestDay(isRest) {
     const shiftInputs = document.getElementById('shiftInputs');

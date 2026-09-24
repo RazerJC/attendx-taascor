@@ -1,26 +1,25 @@
 <%- include('../partials/layout-top') %>
 
-<div class="page-header">
-    <div>
-        <h2>System Administrator Dashboard</h2>
-        <div class="breadcrumb">
-            <span>Overall Workforce, Cross-Area Health & Audit Trail</span>
-        </div>
-    </div>
-</div>
+<%- include('../partials/dashboard-hero', {
+    eyebrow: 'People and operations',
+    headline: 'One connected team, across every workplace.',
+    description: 'A shared view of HR and coordinator attendance, employee records, warehouse operations, and daily activity inside TAASCOR ETS.',
+    contextTitle: 'System administrator workspace',
+    contextText: 'Oversee your teams, manage account access, and follow operations across all assigned warehouses.'
+}) %>
 
 <!-- Summary Cards -->
 <div class="summary-cards">
     <div class="summary-card">
-        <div class="card-icon navy">👥</div>
+        <div class="card-icon navy"><%- include('../partials/outline-icon', {icon:'people'}) %></div>
         <div class="card-data">
-            <h4><%= totalEmployees %></h4>
-            <p>Active Employees</p>
+            <h4><%= staff.filter(s => s.status === "active").length %></h4>
+            <p>Active HR & Coordinators</p>
         </div>
     </div>
 
     <div class="summary-card">
-        <div class="card-icon blue">🏢</div>
+        <div class="card-icon blue"><%- include('../partials/outline-icon', {icon:'building'}) %></div>
         <div class="card-data">
             <h4><%= totalAreas %></h4>
             <p>Active Warehouses</p>
@@ -28,7 +27,7 @@
     </div>
 
     <div class="summary-card">
-        <div class="card-icon green">👤</div>
+        <div class="card-icon green"><%- include('../partials/outline-icon', {icon:'person'}) %></div>
         <div class="card-data">
             <h4><%= totalUsers %></h4>
             <p>Active Accounts</p>
@@ -36,7 +35,7 @@
     </div>
 
     <div class="summary-card">
-        <div class="card-icon yellow">⏳</div>
+        <div class="card-icon yellow"><%- include('../partials/outline-icon', {icon:'hourglass'}) %></div>
         <div class="card-data">
             <h4><%= pendingAccounts %></h4>
             <p>Pending Registrations</p>
@@ -44,6 +43,21 @@
     </div>
 </div>
 
+<%- include('../partials/dashboard-shortcuts', { shortcuts: [
+    { href: '/coordinator-attendance', label: 'Staff attendance' },
+    { href: '/admin/users', label: 'User management' },
+    { href: '/admin/areas', label: 'Warehouses and areas' },
+    { href: '/admin/audit-logs', label: 'Audit trail' }
+] }) %>
+<div class="card mb-3">
+ <div class="card-header"><h3>My Team — HR & Coordinators</h3><a class="btn btn-sm btn-outline" href="/coordinator-attendance">Attendance history</a></div>
+ <div class="card-body"><p>Today's shift · <%= formatDate(today) %> · Asia/Manila</p></div>
+ <div class="table-responsive"><table class="data-table"><thead><tr><th>Staff member</th><th>Role / Account</th><th>Time in</th><th>Time out</th><th>Shift</th><th>Latest recorded activity</th></tr></thead><tbody>
+ <% if (!staff.length) { %><tr><td colspan="6">No HR or coordinator accounts yet.</td></tr><% } %>
+ <% staff.forEach(s => { %><tr><td><a href="/admin/staff/<%= s.id %>"><strong><%= s.full_name %></strong></a><br><small><%= s.email %></small></td><td><%= s.role %><br><small><%= s.status %></small></td><td><%= s.time_in ? formatTime(s.time_in) : '—' %></td><td><%= s.time_out ? formatTime(s.time_out) : '—' %></td><td><%= s.time_out ? 'Completed' : s.time_in ? 'On duty' : 'No time-in recorded' %></td><td><%= s.latest_action ? s.latest_action.replaceAll('_', ' ') : 'No recorded activity' %></td></tr><% }) %>
+ </tbody></table></div>
+</div>
+<div class="card mb-3"><div class="card-header"><h3>Manpower Requests</h3><a href="/manpower" class="btn btn-sm btn-primary">Monitor requests</a></div><div class="card-body"><%= openRequestsCount %> open requests. Review HR allocations and coordinator arrival confirmations.</div></div>
 <!-- Cross-Area Operations Table -->
 <div class="card mb-3">
     <div class="card-header">
@@ -66,7 +80,7 @@
                     <% areaSummaries.forEach(a => { %>
                         <tr>
                             <td><strong><%= a.name %></strong></td>
-                            <td><%= a.current_coordinator || '<span class="text-muted">Unassigned</span>' %></td>
+                            <td><%= a.current_coordinator || 'Unassigned' %></td>
                             <td><span class="badge badge-primary"><%= a.active_workers %> Workers</span></td>
                             <td><span style="color: var(--color-success); font-weight: 600;"><%= a.present_today %></span></td>
                             <td><span style="<%= a.absent_today > 0 ? 'color: var(--color-danger); font-weight: 700;' : 'color: var(--color-gray-400);' %>"><%= a.absent_today %></span></td>

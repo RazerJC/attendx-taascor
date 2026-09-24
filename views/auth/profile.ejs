@@ -177,7 +177,7 @@
                         <div class="edit-avatar-actions">
                             <strong style="font-size: 0.85rem; color: #0f172a; display: block; margin-bottom: 4px;">Profile Photo</strong>
                             <div class="text-muted" style="font-size: 0.74rem; margin-bottom: 8px;">
-                                Tap to choose a new photo from your computer or phone (JPEG, PNG, WEBP, max 10MB).
+                                Tap to choose a new photo from your computer or phone (JPEG, PNG, WEBP, max 2MB).
                             </div>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                                 <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('avatarFileInput').click()">
@@ -524,8 +524,8 @@ function handleAvatarFileSelect(event) {
         return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-        alert('Image file size must be under 10MB.');
+    if (file.size > 2 * 1024 * 1024) {
+        alert('Image file size must be under 2MB.');
         return;
     }
 

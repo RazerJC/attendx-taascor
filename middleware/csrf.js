@@ -10,8 +10,8 @@ function csrfProtection(req, res, next) {
     req.csrfToken = () => req.session.csrfToken;
     res.locals.csrfToken = req.session.csrfToken;
 
-    // Skip verification for safe HTTP methods or API routes
-    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.path.startsWith('/api/')) {
+    // Skip verification for safe HTTP methods, API routes, or login/register (avoids blocking users on server restart)
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.path.startsWith('/api/') || req.path === '/login' || req.path === '/register') {
         return next();
     }
 

@@ -8,7 +8,7 @@ const { logAction } = require('../services/audit');
 const { DateTime } = require('luxon');
 
 // GET /attendance (Daily Attendance Sheet / Mark Attendance)
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, requireArea, async (req, res) => {
     const user = req.session.user;
     const db = getDb();
     const isCoordinator = user.role === 'COORDINATOR';
@@ -29,7 +29,7 @@ router.get('/', requireAuth, (req, res) => {
     }
 
     // Get active employees for this area
-    const employees = db.prepare(`
+    const employees = (await db.prepare(`
         SELECT e.id, e.employee_id, e.first_name, e.last_name, e.full_name,
                e.area_id, a.name as area_name,
                e.department_id, d.name as dept_name,
@@ -46,7 +46,7 @@ router.get('/', requireAuth, (req, res) => {
         LEFT JOIN btw_cases b ON b.employee_id = e.id AND b.status IN ('pending_hr_review', 'for_clarification')
         WHERE ${empWhere.join(' AND ')}
         ORDER BY d.name ASC, p.title ASC, e.last_name ASC, e.first_name ASC
-    `).all(workDate, workDate, ...empParams);
+    `).all(workDate, workDate, ...empParams));
 
     // Filter by status if selected
     let filteredList = employees;
@@ -98,7 +98,7 @@ router.get('/', requireAuth, (req, res) => {
         deptParams.push(selectedAreaId);
     }
     deptQuery += " ORDER BY name ASC";
-    const areaDepartments = db.prepare(deptQuery).all(...deptParams);
+    const areaDepartments = (await db.prepare(deptQuery).all(...deptParams));
 
     // Group employees by Department and Position for the folder-style interface
     const deptMap = {};
@@ -140,7 +140,7 @@ router.get('/', requireAuth, (req, res) => {
         return hasEmps || (d.id !== 0);
     });
 
-    const areas = user.role !== 'COORDINATOR' ? db.prepare('SELECT * FROM areas WHERE is_active = 1 ORDER BY name ASC').all() : [];
+    const areas = user.role !== 'COORDINATOR' ? (await db.prepare('SELECT * FROM areas WHERE is_active = 1 ORDER BY name ASC').all()) : [];
 
     res.render('attendance/mark', {
         title: 'Daily Attendance - TAASCOR',
@@ -161,7 +161,7 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // POST /attendance (Bulk save attendance)
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, requireArea, async (req, res) => {
     const user = req.session.user;
     const db = getDb();
     const isCoordinator = user.role === 'COORDINATOR';
@@ -171,7 +171,7 @@ router.post('/', requireAuth, (req, res) => {
         work_date = today;
     }
 
-    if (!work_date || !attendance || typeof attendance !== 'object') {
+    if (!work_date || !attendance || typeof attendance !== 'object' || Array.isArray(attendance)) {
         if (req.xhr || req.headers.accept?.includes('application/json')) {
             return res.status(400).json({ success: false, error: 'No attendance data submitted.' });
         }
@@ -184,15 +184,15 @@ router.post('/', requireAuth, (req, res) => {
 
     const upsertStmt = db.prepare(`
         INSERT INTO employee_attendance (employee_id, schedule_id, work_date, status, time_in, time_out, remarks, recorded_by, recorded_at, version)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), 1)
-        ON CONFLICT(employee_id, work_date) DO UPDATE SET
-            schedule_id = excluded.schedule_id,
-            status = excluded.status,
-            time_in = excluded.time_in,
-            time_out = excluded.time_out,
-            remarks = excluded.remarks,
-            updated_by = excluded.recorded_by,
-            updated_at = datetime('now'),
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), 1)
+        ON DUPLICATE KEY UPDATE
+            schedule_id = VALUES(schedule_id),
+            status = VALUES(status),
+            time_in = VALUES(time_in),
+            time_out = VALUES(time_out),
+            remarks = VALUES(remarks),
+            updated_by = VALUES(recorded_by),
+            updated_at = UTC_TIMESTAMP(),
             version = version + 1
     `);
 
@@ -201,7 +201,10 @@ router.post('/', requireAuth, (req, res) => {
 
     // Iterate through submitted rows
     for (const [empIdStr, val] of Object.entries(attendance)) {
-        const empId = parseInt(empIdStr);
+        // Non-numeric form keys prevent URL-encoded parsers compacting employee IDs into array indexes.
+        const idText = empIdStr.replace(/^e_/, '');
+        if (!/^[1-9]\d*$/.test(idText)) continue;
+        const empId = Number(idText);
         if (!empId) continue;
 
         let status = '';
@@ -223,12 +226,12 @@ router.post('/', requireAuth, (req, res) => {
         if (!status || !validStatuses.includes(status)) continue;
 
         // Verify area permission
-        const emp = db.prepare('SELECT area_id FROM employees WHERE id = ?').get(empId);
+        const emp = (await db.prepare('SELECT area_id FROM employees WHERE id = ?').get(empId));
         if (!emp || !validateAreaAccess(emp.area_id, req)) {
             continue; // Skip unauthorized
         }
 
-        upsertStmt.run(
+        (await upsertStmt.run(
             empId,
             scheduleId,
             work_date,
@@ -237,13 +240,13 @@ router.post('/', requireAuth, (req, res) => {
             timeOut,
             remarks,
             user.id
-        );
+        ));
         savedCount++;
 
         // If marked absent, trigger or link back-to-work clearance workflow
         if (status === 'absent') {
             try {
-                handleEmployeeAbsence(empId, work_date, user.id, remarks);
+                (await handleEmployeeAbsence(empId, work_date, user.id, remarks));
                 absentTriggered++;
             } catch (err) {
                 console.error('Error in handleEmployeeAbsence:', err);
@@ -251,11 +254,18 @@ router.post('/', requireAuth, (req, res) => {
         }
     }
 
-    logAction(user.id, 'RECORD_ATTENDANCE', 'employee_attendance', null, {
+    if (savedCount === 0) {
+        const message = 'No attendance was saved. Choose a status for at least one employee in your assigned area, then save again.';
+        if (req.xhr || req.headers.accept?.includes('application/json')) return res.status(400).json({ success: false, error: message, savedCount: 0 });
+        req.flash('error', message);
+        return res.redirect(`/attendance?date=${work_date}`);
+    }
+
+    (await logAction(user.id, 'RECORD_ATTENDANCE', 'employee_attendance', null, {
         work_date,
         savedCount,
         absentTriggered
-    });
+    }));
 
     if (req.xhr || req.headers.accept?.includes('application/json')) {
         return res.json({ success: true, savedCount, absentTriggered, work_date });

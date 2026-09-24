@@ -3,18 +3,18 @@ const { getDb } = require('../db/database');
 /**
  * Calculates summary metrics for a manpower request
  */
-function getManpowerSummary(requestId) {
+async function getManpowerSummary(requestId) {
     const db = getDb();
     
     // Total requested
-    const totalRequested = db.prepare(`
+    const totalRequested = (await db.prepare(`
         SELECT COALESCE(SUM(quantity_requested), 0) as total 
         FROM manpower_request_positions 
         WHERE request_id = ?
-    `).get(requestId).total;
+    `).get(requestId)).total;
 
     // Allocations count
-    const allocStats = db.prepare(`
+    const allocStats = (await db.prepare(`
         SELECT 
             COUNT(*) as total_alloc,
             SUM(CASE WHEN status = 'proposed' THEN 1 ELSE 0 END) as proposed_count,
@@ -22,7 +22,7 @@ function getManpowerSummary(requestId) {
             SUM(CASE WHEN status = 'did_not_report' THEN 1 ELSE 0 END) as no_show_count
         FROM manpower_allocations 
         WHERE request_id = ?
-    `).get(requestId);
+    `).get(requestId));
 
     const confirmed = allocStats.confirmed_count || 0;
     const proposed = allocStats.proposed_count || 0;
@@ -40,14 +40,14 @@ function getManpowerSummary(requestId) {
 /**
  * Automatically updates request status based on confirmation numbers
  */
-function syncRequestStatus(requestId) {
+async function syncRequestStatus(requestId) {
     const db = getDb();
-    const req = db.prepare(`SELECT status FROM manpower_requests WHERE id = ?`).get(requestId);
+    const req = (await db.prepare(`SELECT status FROM manpower_requests WHERE id = ?`).get(requestId));
     if (!req || ['declined', 'cancelled'].includes(req.status)) {
         return;
     }
 
-    const summary = getManpowerSummary(requestId);
+    const summary = (await getManpowerSummary(requestId));
 
     let newStatus = req.status;
     if (summary.totalRequested > 0) {
@@ -61,11 +61,11 @@ function syncRequestStatus(requestId) {
     }
 
     if (newStatus !== req.status) {
-        db.prepare(`
+        (await db.prepare(`
             UPDATE manpower_requests 
-            SET status = ?, updated_at = datetime('now') 
+            SET status = ?, updated_at = UTC_TIMESTAMP() 
             WHERE id = ?
-        `).run(newStatus, requestId);
+        `).run(newStatus, requestId));
     }
 }
 

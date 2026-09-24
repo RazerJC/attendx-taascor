@@ -26,8 +26,9 @@ A full-stack, enterprise attendance and workforce management web application bui
 
 ## Technology Stack
 
-- **Backend**: Node.js v20+ / Express.js
-- **Database**: SQLite with WAL mode via native `node:sqlite`
+- **Backend**: Node.js 22 or 24 / Express.js with asynchronous database access
+- **Database**: MySQL 8.0.16+ or MariaDB 10.4+, InnoDB, via mysql2
+- **Sessions**: Persistent MySQL session storage via express-mysql-session
 - **Security**: bcryptjs password hashing, session cookies, rate-limiting, and CSRF protection
 - **Frontend**: Server-rendered EJS with vanilla CSS design system in TAASCOR navy, gold, and red accents
 - **Reporting**: ExcelJS for native spreadsheet generation
@@ -39,7 +40,7 @@ A full-stack, enterprise attendance and workforce management web application bui
 
 1. **Install Dependencies**:
    ```bash
-   npm install
+   npm ci
    ```
 
 2. **Configure Environment**:
@@ -47,14 +48,16 @@ A full-stack, enterprise attendance and workforce management web application bui
    cp .env.example .env
    ```
 
-3. **Seed Database with Demo Data**:
+   Create a MySQL database and set DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, a random SESSION_SECRET, ADMIN_EMAIL, and a unique ADMIN_PASSWORD in .env.
+
+3. **Initialize the Database**:
    ```bash
-   npm run seed
+   npm run db:init
    ```
 
 4. **Run Verification Test Suite**:
    ```bash
-   node verify.js
+   npm test
    ```
 
 5. **Start Application**:
@@ -65,11 +68,15 @@ A full-stack, enterprise attendance and workforce management web application bui
 
 ---
 
-## Default Sample Credentials
+For existing SQLite records, import into an empty MySQL database before initialization: `npm run db:import-sqlite -- /path/to/taascor.db`. Follow [the deployment guide](docs/deployment.md) for Hostinger setup, import precautions, and database integration tests.
+
+## Optional Development Sample Credentials
+
+`npm run seed` creates these demo users for local development only and refuses production execution.
 
 | Role | Email | Password | Assigned Area |
 | :--- | :--- | :--- | :--- |
-| **ADMIN** | `admin@taascor.com` | `Admin123!` | System-Wide |
+| **ADMIN** | Your `ADMIN_EMAIL` | Your `ADMIN_PASSWORD` | System-Wide |
 | **HR** | `hr.santos@taascor.com` | `HrUser123!` | System-Wide |
 | **COORDINATOR** | `juan.delacruz@taascor.com` | `Coord123!` | Warehouse A - Pasig |
 | **COORDINATOR** | `anna.reyes@taascor.com` | `Coord123!` | Warehouse B - Taguig |

@@ -3,3 +3,12 @@ scratch
 .git
 .env
 *.log
+*.db
+*.db-wal
+*.db-shm
+db/backups
+.env.*
+!.env.example
+db/legacy-sqlite
+db/database-sqlite.js
+public/uploads

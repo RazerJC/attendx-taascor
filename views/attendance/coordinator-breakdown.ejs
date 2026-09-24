@@ -1,0 +1,504 @@
+<%- include('../partials/layout-top') %>
+
+<style>
+/* ── COORDINATOR TIMEKEEPING BREAKDOWN ─────────────────────── */
+.breakdown-header-card {
+    background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 70%, #2b467d 100%);
+    border-radius: var(--radius-lg);
+    padding: 24px 28px;
+    color: #ffffff;
+    box-shadow: 0 10px 25px rgba(27, 42, 74, 0.15);
+    margin-bottom: 22px;
+}
+.breakdown-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+.breakdown-title h2 {
+    font-size: 1.55rem;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.breakdown-title p {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.82);
+    margin: 0;
+}
+.coor-badge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin-top: 10px;
+}
+
+/* ── TOOLBAR & CUTOFF SELECTOR ──────────────────────────── */
+.breakdown-toolbar {
+    background: #ffffff;
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    box-shadow: var(--shadow-sm);
+}
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.cutoff-btn {
+    padding: 7px 14px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-gray-300);
+    background: var(--color-gray-50);
+    color: var(--color-gray-700);
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+.cutoff-btn:hover {
+    background: var(--color-gray-100);
+}
+.cutoff-btn.active {
+    background: var(--color-primary);
+    color: #ffffff;
+    border-color: var(--color-primary);
+}
+
+/* ── KPI & BANK INFO GRID ───────────────────────────────── */
+.info-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 18px;
+    margin-bottom: 22px;
+}
+.info-box-card {
+    background: #ffffff;
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    padding: 18px 20px;
+    box-shadow: var(--shadow-sm);
+}
+.info-box-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-primary);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-bottom: 1px solid var(--color-gray-100);
+    padding-bottom: 8px;
+}
+.summary-stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    font-size: 0.88rem;
+    color: var(--color-gray-600);
+    border-bottom: 1px dashed var(--color-gray-100);
+}
+.summary-stat-row:last-child {
+    border-bottom: 0;
+}
+.summary-stat-row strong {
+    color: var(--color-gray-800);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── TIMEKEEPING TABLE ──────────────────────────────────── */
+.timekeeping-card {
+    background: #ffffff;
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 24px;
+    overflow: hidden;
+}
+.timekeeping-card-header {
+    padding: 16px 20px;
+    background: var(--color-gray-50);
+    border-bottom: 1px solid var(--color-gray-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.timekeeping-card-header h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.tk-table-wrap {
+    overflow-x: auto;
+    width: 100%;
+}
+.tk-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    min-width: 1100px;
+}
+.tk-table th {
+    background: #1b2a4a;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    padding: 10px 10px;
+    border: 1px solid #2d416b;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+.tk-table td {
+    padding: 8px 10px;
+    border: 1px solid var(--color-gray-200);
+    vertical-align: middle;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+.tk-table td.text-left {
+    text-align: left;
+}
+.tk-table tr:nth-child(even) td {
+    background: #fbfcfe;
+}
+.tk-table tr:hover td {
+    background: rgba(37, 99, 235, 0.05);
+}
+
+/* Time In & Out styling */
+.time-col-in {
+    font-weight: 700;
+    color: #059669;
+}
+.time-col-out {
+    font-weight: 700;
+    color: #2563eb;
+}
+.time-col-empty {
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+/* Totals Row */
+.tk-totals-row td {
+    background: #f1f5f9 !important;
+    font-weight: 700;
+    color: var(--color-primary-dark);
+    border-top: 2px solid #cbd5e1;
+    border-bottom: 2px solid #94a3b8;
+}
+
+/* Print styling */
+@media print {
+    .sidebar, .header, .breakdown-toolbar, .btn, .coor-switcher {
+        display: none !important;
+    }
+    .main-content {
+        margin-left: 0 !important;
+        padding: 0 !important;
+    }
+    .breakdown-header-card {
+        background: none !important;
+        color: #000 !important;
+        border-bottom: 2px solid #000 !important;
+        padding: 10px 0 !important;
+    }
+    .breakdown-title h2, .breakdown-title p, .coor-badge-pill {
+        color: #000 !important;
+    }
+    .tk-table th {
+        background: #eee !important;
+        color: #000 !important;
+        border-color: #999 !important;
+    }
+    .tk-table td {
+        border-color: #999 !important;
+    }
+}
+</style>
+
+<!-- BREADCRUMB -->
+<div style="margin-bottom: 12px; font-size: 0.85rem; color: var(--color-gray-500); display: flex; align-items: center; gap: 8px;">
+    <a href="/coordinator-attendance" style="color: var(--color-primary); text-decoration: none;">⏱️ Coordinator Monitor</a>
+    <span>/</span>
+    <span style="color: var(--color-gray-700); font-weight: 600;">Timekeeping Breakdown (<%= coordinator.name %>)</span>
+</div>
+
+<!-- HEADER HERO CARD -->
+<div class="breakdown-header-card">
+    <div class="breakdown-header-top">
+        <div class="breakdown-title">
+            <h2>
+                <span>📊</span>
+                <span><%= coordinator.name %></span>
+            </h2>
+            <p>Official Semi-Monthly Cutoff Attendance Sheet • Format matching Master Timekeeping Sheet</p>
+            <div class="coor-badge-pill">
+                <span>📍 Warehouse / Area: <strong><%= coordinator.area %></strong></span>
+                <span style="opacity: 0.5;">|</span>
+                <span>📅 Cutoff: <strong><%= period.label %></strong></span>
+                <span style="opacity: 0.5;">|</span>
+                <span>⏱️ Military Time (24H Format)</span>
+            </div>
+        </div>
+        <div>
+            <a href="/coordinator-attendance" class="btn btn-outline btn-sm" style="color: #ffffff; border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.1);">
+                ← Back to Monitor
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- TOOLBAR: CUTOFF PRESETS, COORDINATOR SWITCHER, & EXPORTS -->
+<div class="breakdown-toolbar">
+    <div class="toolbar-group">
+        <span style="font-weight: 600; font-size: 0.84rem; color: var(--color-gray-700);">Switch Coordinator:</span>
+        <select class="form-control" style="font-size: 0.85rem; padding: 6px 12px; min-width: 220px;" onchange="window.location.href='/coordinator-attendance/breakdown/' + this.value + '?date_from=<%= dateFrom %>&date_to=<%= dateTo %>'">
+            <% coordinatorsList.forEach(c => { %>
+                <option value="<%= c.id %>" <%= String(c.id) === String(coordinator.id) ? 'selected' : '' %>>
+                    <%= c.full_name %> (<%= c.area_name || 'Warehouse' %>)
+                </option>
+            <% }) %>
+        </select>
+    </div>
+
+    <div class="toolbar-group">
+        <span style="font-weight: 600; font-size: 0.84rem; color: var(--color-gray-700);">Cutoff Period:</span>
+        <a href="/coordinator-attendance/breakdown/<%= coordinator.id %>?date_from=2026-09-16&date_to=2026-09-30" class="cutoff-btn <%= dateFrom === '2026-09-16' && dateTo === '2026-09-30' ? 'active' : '' %>">
+            Sept 16 - 30, 2026
+        </a>
+        <a href="/coordinator-attendance/breakdown/<%= coordinator.id %>?date_from=2026-09-01&date_to=2026-09-15" class="cutoff-btn <%= dateFrom === '2026-09-01' && dateTo === '2026-09-15' ? 'active' : '' %>">
+            Sept 01 - 15, 2026
+        </a>
+        <form method="GET" action="/coordinator-attendance/breakdown/<%= coordinator.id %>" style="display: inline-flex; align-items: center; gap: 6px;">
+            <input type="date" name="date_from" value="<%= dateFrom %>" style="padding: 5px 8px; font-size: 0.82rem; border: 1px solid #ccc; border-radius: 4px;" title="Cutoff Start Date">
+            <span style="font-size: 0.8rem; color: #666;">to</span>
+            <input type="date" name="date_to" value="<%= dateTo %>" style="padding: 5px 8px; font-size: 0.82rem; border: 1px solid #ccc; border-radius: 4px;" title="Cutoff End Date" onchange="this.form.submit()">
+        </form>
+    </div>
+
+    <div class="toolbar-group">
+        <a href="/coordinator-attendance/breakdown/<%= coordinator.id %>/export?date_from=<%= dateFrom %>&date_to=<%= dateTo %>" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-weight: 600;">
+            <span>📥 Export Excel (.xlsx)</span>
+        </a>
+        <button type="button" class="btn btn-outline btn-sm" onclick="window.print();" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px;">
+            <span>🖨️ Print Sheet</span>
+        </button>
+    </div>
+</div>
+
+<!-- KPI SUMMARY & BANK DETAILS CARDS -->
+<div class="info-cards-grid">
+    <!-- Card 1: Timekeeping Summary -->
+    <div class="info-box-card">
+        <div class="info-box-title">
+            <span>⏱️</span>
+            <span>Regular Hours & Shift Summary</span>
+        </div>
+        <div class="summary-stat-row">
+            <span>Total Days Worked (Reg Hrs / 8):</span>
+            <strong style="font-size: 1.05rem; color: var(--color-success);"><%= totals.days %> days</strong>
+        </div>
+        <div class="summary-stat-row">
+            <span>Regular Hours (Reg Hrs):</span>
+            <strong><%= totals.regHrs %> hrs</strong>
+        </div>
+        <div class="summary-stat-row">
+            <span>Regular Overtime (Reg OT):</span>
+            <strong style="color: #2563eb;"><%= totals.regOt %> hrs</strong>
+        </div>
+        <div class="summary-stat-row">
+            <span>Night Differential (ND):</span>
+            <strong><%= totals.nd %> hrs</strong>
+        </div>
+        <div class="summary-stat-row">
+            <span>Number of Late/s:</span>
+            <strong style="<%= parseFloat(totals.late) > 0 ? 'color: var(--color-danger);' : '' %>"><%= totals.late %></strong>
+        </div>
+    </div>
+
+    <!-- Card 2: Holidays & Special Work -->
+    <div class="info-box-card">
+        <div class="info-box-title">
+            <span>🏖️</span>
+            <span>Holiday & Rest Day Breakdown</span>
+        </div>
+        <div class="summary-stat-row">
+            <span>Sun / Special Holiday / Rest Day:</span>
+            <strong><%= totals.sunSpHolRd %> hrs</strong>
+        </div>
+        <div class="summary-stat-row">
+            <span>Sun / Sp. Hol / Rest Day OT:</span>
+            <strong><%= totals.sunSpHolRdOt %> hrs</strong>
+        </div>
+        <div class="summary-stat-row">
+            <span>Legal Holiday:</span>
+            <strong><%= totals.legalHol %> hrs</strong>
+        </div>
+        <div class="summary-stat-row">
+            <span>Legal Holiday OT:</span>
+            <strong><%= totals.legalHolOt %> hrs</strong>
+        </div>
+        <div class="summary-stat-row">
+            <span>VL / SIL (Vacation Leave / SIL):</span>
+            <strong><%= totals.vlSil %> days</strong>
+        </div>
+    </div>
+
+    <!-- Card 3: Bank / Disbursement Information -->
+    <div class="info-box-card">
+        <div class="info-box-title">
+            <span>💳</span>
+            <span>Disbursement & Bank Accounts</span>
+        </div>
+        <div class="summary-stat-row">
+            <span>GCash Number:</span>
+            <strong style="color: #0070ba;"><%= coordinator.bankInfo.gcash %></strong>
+        </div>
+        <div class="summary-stat-row">
+            <span>GoTyme Bank:</span>
+            <strong><%= coordinator.bankInfo.gotyme %></strong>
+        </div>
+        <div class="summary-stat-row">
+            <span>Metrobank ATM:</span>
+            <strong><%= coordinator.bankInfo.metrobank %></strong>
+        </div>
+        <div class="summary-stat-row">
+            <span>Security Bank:</span>
+            <strong><%= coordinator.bankInfo.securityBank %></strong>
+        </div>
+        <div class="summary-stat-row">
+            <span>Account Status:</span>
+            <span class="badge badge-success" style="font-size: 0.72rem;">Verified Coordinator</span>
+        </div>
+    </div>
+</div>
+
+<!-- TIMEKEEPING MASTER BREAKDOWN TABLE -->
+<div class="timekeeping-card">
+    <div class="timekeeping-card-header">
+        <h3>
+            <span>📋</span>
+            <span>TIME KEEPING SHEET — <%= coordinator.name %> (<%= period.label %>)</span>
+        </h3>
+        <span style="font-size: 0.8rem; color: var(--color-gray-500);">
+            Times displayed in <strong>24-Hour Military Time</strong>
+        </span>
+    </div>
+
+    <div class="tk-table-wrap">
+        <table class="tk-table" id="timekeepingTable">
+            <thead>
+                <tr>
+                    <th style="min-width: 200px; text-align: left;">DATE</th>
+                    <th style="min-width: 85px;">Time In</th>
+                    <th style="min-width: 85px;">Time Out</th>
+                    <th style="min-width: 75px;">Number of days</th>
+                    <th style="min-width: 75px;">Number of late/s</th>
+                    <th style="min-width: 75px;">Reg Hrs</th>
+                    <th style="min-width: 75px;">Reg OT</th>
+                    <th style="min-width: 65px;">ND</th>
+                    <th style="min-width: 95px;">Sun/Sp. Hol/ RD work</th>
+                    <th style="min-width: 95px;">Sun/Sp. Hol/ RD work OT</th>
+                    <th style="min-width: 85px;">LEGAL HOLIDAY</th>
+                    <th style="min-width: 85px;">Legal Holiday OT</th>
+                    <th style="min-width: 95px;">working on RD Sp. Hol</th>
+                    <th style="min-width: 95px;">working on RD Sp. Hol OT</th>
+                    <th style="min-width: 75px;">VL / SIL</th>
+                    <th style="min-width: 120px; text-align: left;">Adjustment</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% days.forEach(d => { %>
+                    <tr>
+                        <td class="text-left">
+                            <strong><%= d.dateText %></strong>
+                        </td>
+                        <td class="<%= d.timeIn ? 'time-col-in' : 'time-col-empty' %>">
+                            <%= d.timeIn ? d.timeIn : '—' %>
+                        </td>
+                        <td class="<%= d.timeOut ? 'time-col-out' : 'time-col-empty' %>">
+                            <%= d.timeOut ? d.timeOut : '—' %>
+                        </td>
+                        <td><%= d.numDays !== '0.00' ? d.numDays : '0' %></td>
+                        <td style="<%= parseFloat(d.late) > 0 ? 'color: var(--color-danger); font-weight: 700;' : '' %>">
+                            <%= d.late !== '0.00' ? d.late : '0' %>
+                        </td>
+                        <td style="<%= parseFloat(d.regHrs) > 0 ? 'font-weight: 600;' : '' %>">
+                            <%= d.regHrs !== '0.00' ? d.regHrs : '0.00' %>
+                        </td>
+                        <td><%= d.regOt !== '0.00' ? d.regOt : '' %></td>
+                        <td><%= d.nd !== '0.00' ? d.nd : '' %></td>
+                        <td><%= d.sunSpHolRd !== '0.00' ? d.sunSpHolRd : '' %></td>
+                        <td><%= d.sunSpHolRdOt !== '0.00' ? d.sunSpHolRdOt : '' %></td>
+                        <td><%= d.legalHol !== '0.00' ? d.legalHol : '' %></td>
+                        <td><%= d.legalHolOt !== '0.00' ? d.legalHolOt : '' %></td>
+                        <td><%= d.rdSpHol !== '0.00' ? d.rdSpHol : '' %></td>
+                        <td><%= d.rdSpHolOt !== '0.00' ? d.rdSpHolOt : '' %></td>
+                        <td><%= d.vlSil !== '0.00' ? d.vlSil : '' %></td>
+                        <td class="text-left" style="font-size: 0.78rem; color: var(--color-gray-600);">
+                            <%= d.adjustment || '' %>
+                        </td>
+                    </tr>
+                <% }) %>
+
+                <!-- TOTAL ROW (matching Excel sheet bottom) -->
+                <tr class="tk-totals-row">
+                    <td class="text-left" style="text-align: left; font-size: 0.85rem; letter-spacing: 0.5px;">
+                        <strong>TOTAL</strong>
+                    </td>
+                    <td></td>
+                    <td></td>
+                    <td><%= totals.days %></td>
+                    <td><%= totals.late %></td>
+                    <td><%= totals.regHrs %></td>
+                    <td><%= totals.regOt %></td>
+                    <td><%= totals.nd %></td>
+                    <td><%= totals.sunSpHolRd %></td>
+                    <td><%= totals.sunSpHolRdOt %></td>
+                    <td><%= totals.legalHol %></td>
+                    <td><%= totals.legalHolOt %></td>
+                    <td><%= totals.rdSpHol %></td>
+                    <td><%= totals.rdSpHolOt %></td>
+                    <td><%= totals.vlSil %></td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<%- include('../partials/layout-bottom') %>

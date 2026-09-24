@@ -4,9 +4,9 @@ const { requireAuth } = require('../middleware/auth');
 const { getNotifications, markAsRead, markAllAsRead } = require('../services/notification');
 
 // GET /notifications
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
     const user = req.session.user;
-    const notifications = getNotifications(user.id, 50, 0);
+    const notifications = (await getNotifications(user.id, 50, 0));
 
     res.render('notifications/index', {
         title: 'Notifications - TAASCOR',
@@ -15,10 +15,10 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // POST /notifications/:id/read
-router.post('/:id/read', requireAuth, (req, res) => {
+router.post('/:id/read', requireAuth, async (req, res) => {
     const user = req.session.user;
     const id = parseInt(req.params.id);
-    markAsRead(id, user.id);
+    (await markAsRead(id, user.id));
 
     if (req.xhr || req.headers.accept?.includes('application/json')) {
         return res.json({ success: true });
@@ -27,9 +27,9 @@ router.post('/:id/read', requireAuth, (req, res) => {
 });
 
 // POST /notifications/mark-all-read
-router.post('/mark-all-read', requireAuth, (req, res) => {
+router.post('/mark-all-read', requireAuth, async (req, res) => {
     const user = req.session.user;
-    markAllAsRead(user.id);
+    (await markAllAsRead(user.id));
 
     if (req.xhr || req.headers.accept?.includes('application/json')) {
         return res.json({ success: true });

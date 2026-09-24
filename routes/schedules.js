@@ -7,7 +7,7 @@ const { logAction } = require('../services/audit');
 const { DateTime } = require('luxon');
 
 // GET /schedules
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
     const user = req.session.user;
     const db = getDb();
     const view = req.query.view === 'calendar' ? 'calendar' : 'table';
@@ -36,7 +36,7 @@ router.get('/', requireAuth, (req, res) => {
         empParams.push(departmentId);
     }
 
-    const employees = db.prepare(`
+    const employees = (await db.prepare(`
         SELECT e.id, e.employee_id, e.full_name, a.name as area_name, p.title as position_title,
                e.department_id, d.name as dept_name
         FROM employees e
@@ -45,16 +45,16 @@ router.get('/', requireAuth, (req, res) => {
         LEFT JOIN departments d ON e.department_id = d.id
         WHERE ${empWhere.join(' AND ')}
         ORDER BY d.name ASC, e.full_name ASC
-    `).all(...empParams);
+    `).all(...empParams));
 
     // Fetch schedules for all active employees for this week
     const placeholders = weekDates.map(() => '?').join(',');
-    const schedules = db.prepare(`
+    const schedules = (await db.prepare(`
         SELECT es.*, e.area_id 
         FROM employee_schedules es
         JOIN employees e ON es.employee_id = e.id
         WHERE es.work_date IN (${placeholders})
-    `).all(...weekDates);
+    `).all(...weekDates));
 
     // Map by employee_id and work_date
     const scheduleMap = {};
@@ -65,7 +65,7 @@ router.get('/', requireAuth, (req, res) => {
         scheduleMap[s.employee_id][s.work_date] = s;
     }
 
-    const areas = user.role !== 'COORDINATOR' ? db.prepare('SELECT * FROM areas WHERE is_active = 1 ORDER BY name ASC').all() : [];
+    const areas = user.role !== 'COORDINATOR' ? (await db.prepare('SELECT * FROM areas WHERE is_active = 1 ORDER BY name ASC').all()) : [];
     
     let deptQuery = "SELECT * FROM departments";
     let deptParams = [];
@@ -74,7 +74,7 @@ router.get('/', requireAuth, (req, res) => {
         deptParams.push(selectedAreaId);
     }
     deptQuery += " ORDER BY name ASC";
-    const departments = db.prepare(deptQuery).all(...deptParams);
+    const departments = (await db.prepare(deptQuery).all(...deptParams));
 
     res.render('schedules/list', {
         title: 'Work Schedules - TAASCOR',
@@ -91,7 +91,7 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // GET /schedules/new
-router.get('/new', requireAuth, (req, res) => {
+router.get('/new', requireAuth, async (req, res) => {
     const user = req.session.user;
     const db = getDb();
 
@@ -104,16 +104,16 @@ router.get('/new', requireAuth, (req, res) => {
         empParams.push(selectedAreaId);
     }
 
-    const employees = db.prepare(`
+    const employees = (await db.prepare(`
         SELECT e.id, e.employee_id, e.full_name, e.area_id, d.name as dept_name, p.title as position_title
         FROM employees e
         LEFT JOIN departments d ON e.department_id = d.id
         LEFT JOIN positions p ON e.position_id = p.id
         WHERE ${empWhere.join(' AND ')}
         ORDER BY d.name ASC, e.full_name ASC
-    `).all(...empParams);
+    `).all(...empParams));
 
-    const areas = user.role !== 'COORDINATOR' ? db.prepare('SELECT * FROM areas WHERE is_active = 1 ORDER BY name ASC').all() : [];
+    const areas = user.role !== 'COORDINATOR' ? (await db.prepare('SELECT * FROM areas WHERE is_active = 1 ORDER BY name ASC').all()) : [];
 
     res.render('schedules/form', {
         title: 'Assign Schedule - TAASCOR',
@@ -125,7 +125,7 @@ router.get('/new', requireAuth, (req, res) => {
 });
 
 // POST /schedules
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
     const user = req.session.user;
     const db = getDb();
     let { employee_ids, start_date, end_date, shift_start, shift_end, is_rest_day, notes } = req.body;
@@ -159,7 +159,7 @@ router.post('/', requireAuth, (req, res) => {
 
     // Verify area access for each employee
     for (const empId of employee_ids) {
-        const emp = db.prepare('SELECT area_id FROM employees WHERE id = ?').get(parseInt(empId));
+        const emp = (await db.prepare('SELECT area_id FROM employees WHERE id = ?').get(parseInt(empId)));
         if (!emp || !validateAreaAccess(emp.area_id, req)) {
             return res.status(403).render('error', { title: 'Access Denied', message: 'You cannot schedule employees outside your assigned area.', code: 403 });
         }
@@ -169,20 +169,20 @@ router.post('/', requireAuth, (req, res) => {
     let savedCount = 0;
     const saveStmt = db.prepare(`
         INSERT INTO employee_schedules (employee_id, work_date, shift_start, shift_end, is_rest_day, notes, created_by, created_at, updated_by, updated_at, version)
-        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), ?, datetime('now'), 1)
-        ON CONFLICT(employee_id, work_date) DO UPDATE SET
-            shift_start = excluded.shift_start,
-            shift_end = excluded.shift_end,
-            is_rest_day = excluded.is_rest_day,
-            notes = excluded.notes,
-            updated_by = excluded.updated_by,
-            updated_at = datetime('now'),
+        VALUES (?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), ?, UTC_TIMESTAMP(), 1)
+        ON DUPLICATE KEY UPDATE
+            shift_start = VALUES(shift_start),
+            shift_end = VALUES(shift_end),
+            is_rest_day = VALUES(is_rest_day),
+            notes = VALUES(notes),
+            updated_by = VALUES(updated_by),
+            updated_at = UTC_TIMESTAMP(),
             version = version + 1
     `);
 
     for (const empId of employee_ids) {
         for (const date of dateList) {
-            saveStmt.run(
+            (await saveStmt.run(
                 parseInt(empId),
                 date,
                 isRest ? null : shift_start,
@@ -191,16 +191,16 @@ router.post('/', requireAuth, (req, res) => {
                 notes ? notes.trim() : null,
                 user.id,
                 user.id
-            );
+            ));
             savedCount++;
         }
     }
 
-    logAction(user.id, 'ASSIGN_SCHEDULE', 'employee_schedules', null, {
+    (await logAction(user.id, 'ASSIGN_SCHEDULE', 'employee_schedules', null, {
         employees_count: employee_ids.length,
         dates_count: dateList.length,
         shift: isRest ? 'Rest Day' : `${shift_start} - ${shift_end}`
-    });
+    }));
 
     req.flash('success', `Successfully saved ${savedCount} schedule record(s).`);
     res.redirect(`/schedules?date=${start_date}`);

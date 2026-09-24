@@ -1,11 +1,9 @@
 <%- include('../partials/layout-top') %>
 
+<div class="employee-management-page">
 <div class="page-header">
     <div>
-        <h2>Employee Masterfile</h2>
-        <div class="breadcrumb">
-            <span>Manage employee profiles across operational warehouses</span>
-        </div>
+        <h2>Employee Management</h2>
     </div>
     <div>
         <a href="/employees/new" class="btn btn-primary">➕ Add Employee</a>
@@ -52,7 +50,7 @@
 
     <div class="filter-group">
         <label for="position_id">Position</label>
-        <select id="position_id" name="position_id" class="form-control">
+        <select id="position_id" name="position_id" class="form-control" onchange="this.form.requestSubmit()">
             <option value="">All Positions</option>
             <% positions.forEach(p => { %>
                 <option value="<%= p.id %>" <%= positionId === p.id ? 'selected' : '' %>><%= p.title %></option>
@@ -91,7 +89,7 @@
                         <th>Warehouse</th>
                         <th>Position</th>
                         <th>Start Date</th>
-                        <th>Clearance Status</th>
+                        <th>Employee / BTW status</th>
                         <th class="text-right">Actions</th>
                     </tr>
                 </thead>
@@ -130,11 +128,7 @@
                                 <td><%= e.position_title || '<span class="text-muted">—</span>' %></td>
                                 <td><%= formatDate(e.employment_start_date) %></td>
                                 <td>
-                                    <% if (e.open_btw_status) { %>
-                                        <span class="badge badge-warning">🏥 Clearance Pending</span>
-                                    <% } else { %>
-                                        <span class="badge badge-success">✓ Cleared</span>
-                                    <% } %>
+                                    <button type="button" class="btn btn-sm btn-outline" data-employee-status="<%= e.id %>"><%= ({approved:'Approved',not_approved:'Rejected',pending_hr_review:'Pending HR review',for_clarification:'For clarification'})[e.open_btw_status] || 'View status' %></button>
                                 </td>
                                 <td class="text-right">
                                     <a href="/employees/<%= e.id %>" class="btn btn-sm btn-outline">View</a>
@@ -147,6 +141,7 @@
             </table>
         </div>
     </div>
+</div>
 </div>
 
 <%- include('../partials/layout-bottom') %>

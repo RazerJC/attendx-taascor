@@ -37,12 +37,19 @@
                 <div class="form-group">
                     <label for="hr_password">Initial Password <span class="required">*</span></label>
                     <input type="password" id="hr_password" name="password" class="form-control" required minlength="8">
-                    <div class="form-help">User will be prompted to change password upon first login.</div>
+                    <div class="form-help">Default password if creating on user's behalf.</div>
+                </div>
+                <div class="form-group">
+                    <label for="hr_role">Account Role <span class="required">*</span></label>
+                    <select id="hr_role" name="role" class="form-control" required>
+                        <option value="HEAD_HR">Head HR (Coordinator Attendance Monitor)</option>
+                        <option value="HR">HR Staff (General Operations)</option>
+                    </select>
                 </div>
             </div>
 
             <div class="btn-group">
-                <button type="submit" class="btn btn-primary">Create HR Account</button>
+                <button type="submit" class="btn btn-primary">Create Account</button>
                 <button type="button" class="btn btn-outline" onclick="document.getElementById('createHrCard').style.display = 'none'">Cancel</button>
             </div>
         </form>
@@ -73,6 +80,8 @@
                             <td>
                                 <% if (u.role === 'ADMIN') { %>
                                     <span class="badge" style="background: var(--color-gold); color: var(--color-primary-dark); font-weight: 700;">ADMIN</span>
+                                <% } else if (u.role === 'HEAD_HR') { %>
+                                    <span class="badge" style="background: rgba(37,99,235,0.15); color: #1d4ed8; font-weight: 700; border: 1px solid rgba(37,99,235,0.3);">HEAD HR</span>
                                 <% } else if (u.role === 'HR') { %>
                                     <span class="badge" style="background: rgba(139,26,26,0.1); color: var(--color-accent); font-weight: 700;">HR</span>
                                 <% } else { %>

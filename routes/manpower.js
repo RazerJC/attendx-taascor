@@ -8,7 +8,7 @@ const { notifyHR, createNotification } = require('../services/notification');
 const { getManpowerSummary, syncRequestStatus } = require('../services/manpower');
 
 // GET /manpower (List requests)
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
     const user = req.session.user;
     const db = getDb();
     const statusFilter = req.query.status || '';
@@ -29,8 +29,8 @@ router.get('/', requireAuth, (req, res) => {
 
     const whereClause = where.length > 0 ? 'WHERE ' + where.join(' AND ') : '';
 
-    const requests = db.prepare(`
-        SELECT mr.*, a.name as area_name, u.full_name as requester_name,
+    const requests = (await db.prepare(`
+        SELECT mr.*, a.name as area_name, u.full_name as requester_name, (SELECT hu.full_name FROM manpower_request_handlers mh JOIN users hu ON hu.id=mh.hr_id WHERE mh.request_id=mr.id) as handler_name,
                COALESCE((SELECT SUM(quantity_requested) FROM manpower_request_positions WHERE request_id = mr.id), 0) as total_requested,
                COALESCE((SELECT COUNT(*) FROM manpower_allocations WHERE request_id = mr.id AND status = 'confirmed'), 0) as confirmed_count,
                COALESCE((SELECT COUNT(*) FROM manpower_allocations WHERE request_id = mr.id AND status = 'proposed'), 0) as proposed_count,
@@ -40,9 +40,9 @@ router.get('/', requireAuth, (req, res) => {
         LEFT JOIN users u ON mr.requested_by = u.id
         ${whereClause}
         ORDER BY mr.created_at DESC
-    `).all(...params);
+    `).all(...params));
 
-    const areas = user.role !== 'COORDINATOR' ? db.prepare('SELECT * FROM areas WHERE is_active = 1 ORDER BY name ASC').all() : [];
+    const areas = user.role !== 'COORDINATOR' ? (await db.prepare('SELECT * FROM areas WHERE is_active = 1 ORDER BY name ASC').all()) : [];
 
     res.render('manpower/list', {
         title: 'Manpower Requests - TAASCOR',
@@ -54,14 +54,14 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // GET /manpower/new
-router.get('/new', requireAuth, (req, res) => {
+router.get('/new', requireAuth, async (req, res) => {
     const user = req.session.user;
     const db = getDb();
 
-    const positions = db.prepare('SELECT * FROM positions WHERE is_active = 1 ORDER BY title ASC').all();
+    const positions = (await db.prepare('SELECT * FROM positions WHERE is_active = 1 ORDER BY title ASC').all());
     const areas = user.role === 'COORDINATOR'
         ? [req.userArea]
-        : db.prepare('SELECT * FROM areas WHERE is_active = 1 ORDER BY name ASC').all();
+        : (await db.prepare('SELECT * FROM areas WHERE is_active = 1 ORDER BY name ASC').all());
 
     res.render('manpower/form', {
         title: 'New Manpower Request - TAASCOR',
@@ -71,7 +71,7 @@ router.get('/new', requireAuth, (req, res) => {
 });
 
 // POST /manpower
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
     const user = req.session.user;
     const db = getDb();
     const { area_id, deployment_date, shift_details, reason, priority, remarks, positions } = req.body;
@@ -88,9 +88,9 @@ router.post('/', requireAuth, (req, res) => {
     }
 
     // Insert manpower request
-    const result = db.prepare(`
+    const result = (await db.prepare(`
         INSERT INTO manpower_requests (area_id, requested_by, status, deployment_date, shift_details, reason, priority, remarks, created_at, updated_at)
-        VALUES (?, ?, 'submitted', ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        VALUES (?, ?, 'submitted', ?, ?, ?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())
     `).run(
         assignedAreaId,
         user.id,
@@ -99,7 +99,7 @@ router.post('/', requireAuth, (req, res) => {
         reason.trim(),
         priority || 'normal',
         remarks ? remarks.trim() : null
-    );
+    ));
 
     const requestId = result.lastInsertRowid;
 
@@ -113,47 +113,47 @@ router.post('/', requireAuth, (req, res) => {
         for (const [posIdStr, qtyStr] of Object.entries(positions)) {
             const qty = parseInt(qtyStr);
             if (qty > 0) {
-                posInsert.run(requestId, parseInt(posIdStr), qty);
+                (await posInsert.run(requestId, parseInt(posIdStr), qty));
             }
         }
     }
 
     // Initial thread entry
-    db.prepare(`
+    (await db.prepare(`
         INSERT INTO manpower_request_entries (request_id, author_id, author_role, content, entry_type, created_at)
-        VALUES (?, ?, ?, ?, 'comment', datetime('now'))
-    `).run(requestId, user.id, user.role, `Manpower request submitted for ${deployment_date}. Reason: ${reason}`);
+        VALUES (?, ?, ?, ?, 'comment', UTC_TIMESTAMP())
+    `).run(requestId, user.id, user.role, `Manpower request submitted for ${deployment_date}. Reason: ${reason}`));
 
     // Notify HR
-    notifyHR(
+    (await notifyHR(
         'New Manpower Request',
         `Coordinator ${user.full_name} submitted a manpower request for deployment on ${deployment_date}.`,
         `/manpower/${requestId}`,
         `mp-new-${requestId}`
-    );
+    ));
 
-    logAction(user.id, 'SUBMIT_MANPOWER_REQUEST', 'manpower_requests', requestId, {
+    (await logAction(user.id, 'SUBMIT_MANPOWER_REQUEST', 'manpower_requests', requestId, {
         deployment_date,
         reason
-    });
+    }));
 
     req.flash('success', 'Manpower request submitted to HR.');
     res.redirect(`/manpower/${requestId}`);
 });
 
 // GET /manpower/:id (Thread + allocation view)
-router.get('/:id', requireAuth, (req, res) => {
+router.get('/:id', requireAuth, async (req, res) => {
     const user = req.session.user;
     const db = getDb();
     const id = parseInt(req.params.id);
 
-    const request = db.prepare(`
-        SELECT mr.*, a.name as area_name, u.full_name as requester_name
+    const request = (await db.prepare(`
+        SELECT mr.*, a.name as area_name, u.full_name as requester_name, (SELECT hu.full_name FROM manpower_request_handlers mh JOIN users hu ON hu.id=mh.hr_id WHERE mh.request_id=mr.id) as handler_name
         FROM manpower_requests mr
         JOIN areas a ON mr.area_id = a.id
         LEFT JOIN users u ON mr.requested_by = u.id
         WHERE mr.id = ?
-    `).get(id);
+    `).get(id));
 
     if (!request) {
         req.flash('error', 'Request not found.');
@@ -164,14 +164,14 @@ router.get('/:id', requireAuth, (req, res) => {
         return res.status(403).render('error', { title: 'Access Denied', message: 'You cannot view requests for other areas.', code: 403 });
     }
 
-    const requestedPositions = db.prepare(`
+    const requestedPositions = (await db.prepare(`
         SELECT mrp.*, p.title as position_title 
         FROM manpower_request_positions mrp
         JOIN positions p ON mrp.position_id = p.id
         WHERE mrp.request_id = ?
-    `).all(id);
+    `).all(id));
 
-    const allocations = db.prepare(`
+    const allocations = (await db.prepare(`
         SELECT ma.*, p.title as requested_position_title, 
                act_p.title as actual_position_title,
                e.full_name as existing_emp_name, e.employee_id as emp_code,
@@ -186,19 +186,19 @@ router.get('/:id', requireAuth, (req, res) => {
         LEFT JOIN users conf_user ON ma.confirmed_by = conf_user.id
         WHERE ma.request_id = ?
         ORDER BY ma.created_at ASC
-    `).all(id);
+    `).all(id));
 
-    const entries = db.prepare(`
+    const entries = (await db.prepare(`
         SELECT me.*, u.full_name as author_name 
         FROM manpower_request_entries me
         JOIN users u ON me.author_id = u.id
         WHERE me.request_id = ?
         ORDER BY me.created_at ASC
-    `).all(id);
+    `).all(id));
 
-    const summary = getManpowerSummary(id);
-    const positionsList = db.prepare('SELECT * FROM positions WHERE is_active = 1 ORDER BY title ASC').all();
-    const availableEmployees = db.prepare("SELECT id, employee_id, full_name FROM employees WHERE status = 'active' ORDER BY full_name ASC").all();
+    const summary = (await getManpowerSummary(id));
+    const positionsList = (await db.prepare('SELECT * FROM positions WHERE is_active = 1 ORDER BY title ASC').all());
+    const availableEmployees = (await db.prepare("SELECT id, employee_id, full_name FROM employees WHERE status = 'active' ORDER BY full_name ASC").all());
 
     res.render('manpower/view', {
         title: `Manpower Request #${request.id} - TAASCOR`,
@@ -213,7 +213,7 @@ router.get('/:id', requireAuth, (req, res) => {
 });
 
 // POST /manpower/:id/reply
-router.post('/:id/reply', requireAuth, (req, res) => {
+router.post('/:id/reply', requireAuth, async (req, res) => {
     const user = req.session.user;
     const db = getDb();
     const id = parseInt(req.params.id);
@@ -224,31 +224,31 @@ router.post('/:id/reply', requireAuth, (req, res) => {
         return res.redirect(`/manpower/${id}`);
     }
 
-    const request = db.prepare('SELECT * FROM manpower_requests WHERE id = ?').get(id);
+    const request = (await db.prepare('SELECT * FROM manpower_requests WHERE id = ?').get(id));
     if (!request || !validateAreaAccess(request.area_id, req)) {
         return res.status(403).render('error', { title: 'Access Denied', message: 'Access denied.', code: 403 });
     }
 
-    db.prepare(`
+    (await db.prepare(`
         INSERT INTO manpower_request_entries (request_id, author_id, author_role, content, entry_type, created_at)
-        VALUES (?, ?, ?, ?, 'comment', datetime('now'))
-    `).run(id, user.id, user.role, content.trim());
+        VALUES (?, ?, ?, ?, 'comment', UTC_TIMESTAMP())
+    `).run(id, user.id, user.role, content.trim()));
 
     if (user.role === 'COORDINATOR') {
-        notifyHR(
+        (await notifyHR(
             `Manpower Request #${id} Update`,
             `Coordinator added comments to Request #${id}.`,
             `/manpower/${id}`,
             `mp-reply-${id}-${Date.now()}`
-        );
+        ));
     } else {
-        createNotification(
+        (await createNotification(
             request.requested_by,
             `HR Update on Request #${id}`,
             `HR added comments to your manpower request #${id}.`,
             `/manpower/${id}`,
             `mp-hr-reply-${id}-${Date.now()}`
-        );
+        ));
     }
 
     req.flash('success', 'Message added.');
@@ -256,7 +256,7 @@ router.post('/:id/reply', requireAuth, (req, res) => {
 });
 
 // POST /manpower/:id/allocate (HR assigns named workers)
-router.post('/:id/allocate', requireAuth, (req, res) => {
+router.post('/:id/allocate', requireAuth, async (req, res) => {
     const user = req.session.user;
     if (user.role !== 'HR' && user.role !== 'ADMIN') {
         return res.status(403).render('error', { title: 'Access Denied', message: 'Only HR can assign workers.', code: 403 });
@@ -266,7 +266,7 @@ router.post('/:id/allocate', requireAuth, (req, res) => {
     const id = parseInt(req.params.id);
     const { request_position_id, worker_type, existing_employee_id, worker_name } = req.body;
 
-    const request = db.prepare('SELECT * FROM manpower_requests WHERE id = ?').get(id);
+    const request = (await db.prepare('SELECT * FROM manpower_requests WHERE id = ?').get(id));
     if (!request) {
         req.flash('error', 'Request not found.');
         return res.redirect('/manpower');
@@ -281,7 +281,7 @@ router.post('/:id/allocate', requireAuth, (req, res) => {
             return res.redirect(`/manpower/${id}`);
         }
         assignedEmpId = parseInt(existing_employee_id);
-        const emp = db.prepare('SELECT full_name FROM employees WHERE id = ?').get(assignedEmpId);
+        const emp = (await db.prepare('SELECT full_name FROM employees WHERE id = ?').get(assignedEmpId));
         nameStr = emp ? emp.full_name : 'Existing Worker';
     } else {
         if (!worker_name || !worker_name.trim()) {
@@ -291,54 +291,54 @@ router.post('/:id/allocate', requireAuth, (req, res) => {
         nameStr = worker_name.trim();
     }
 
-    const posRow = db.prepare('SELECT * FROM manpower_request_positions WHERE id = ?').get(parseInt(request_position_id));
+    const posRow = (await db.prepare('SELECT * FROM manpower_request_positions WHERE id = ?').get(parseInt(request_position_id)));
 
-    db.prepare(`
+    (await db.prepare(`
         INSERT INTO manpower_allocations (request_id, request_position_id, employee_id, worker_name, allocated_by, status, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, 'proposed', datetime('now'), datetime('now'))
-    `).run(id, posRow.id, assignedEmpId, nameStr, user.id);
+        VALUES (?, ?, ?, ?, ?, 'proposed', UTC_TIMESTAMP(), UTC_TIMESTAMP())
+    `).run(id, posRow.id, assignedEmpId, nameStr, user.id));
 
     // Thread entry
-    db.prepare(`
+    (await db.prepare(`
         INSERT INTO manpower_request_entries (request_id, author_id, author_role, content, entry_type, created_at)
-        VALUES (?, ?, 'HR', ?, 'allocation', datetime('now'))
-    `).run(id, user.id, `Assigned candidate: "${nameStr}". Awaiting coordinator confirmation upon arrival.`);
+        VALUES (?, ?, 'HR', ?, 'allocation', UTC_TIMESTAMP())
+    `).run(id, user.id, `Assigned candidate: "${nameStr}". Awaiting coordinator confirmation upon arrival.`));
 
-    syncRequestStatus(id);
+    (await syncRequestStatus(id));
 
     // Notify coordinator
-    createNotification(
+    (await createNotification(
         request.requested_by,
         `Worker Assigned to Request #${id}`,
         `HR assigned candidate "${nameStr}" for your review upon arrival.`,
         `/manpower/${id}`,
         `mp-alloc-${id}-${Date.now()}`
-    );
+    ));
 
-    logAction(user.id, 'ALLOCATE_WORKER', 'manpower_allocations', null, { requestId: id, worker: nameStr });
+    (await logAction(user.id, 'ALLOCATE_WORKER', 'manpower_allocations', null, { requestId: id, worker: nameStr }));
 
     req.flash('success', `Assigned worker "${nameStr}". Awaiting coordinator confirmation.`);
     res.redirect(`/manpower/${id}`);
 });
 
 // POST /manpower/:id/confirm-arrival (Coordinator confirms arrival + sets actual position/schedule)
-router.post('/:id/confirm-arrival', requireAuth, (req, res) => {
+router.post('/:id/confirm-arrival', requireAuth, async (req, res) => {
     const user = req.session.user;
     const db = getDb();
     const id = parseInt(req.params.id);
     const { allocation_id, status_decision, actual_position_id, position_change_reason, shift_start, shift_end } = req.body;
 
-    const request = db.prepare('SELECT * FROM manpower_requests WHERE id = ?').get(id);
+    const request = (await db.prepare('SELECT * FROM manpower_requests WHERE id = ?').get(id));
     if (!request || !validateAreaAccess(request.area_id, req)) {
         return res.status(403).render('error', { title: 'Access Denied', message: 'Access denied.', code: 403 });
     }
 
-    const alloc = db.prepare(`
+    const alloc = (await db.prepare(`
         SELECT ma.*, mrp.position_id as requested_position_id 
         FROM manpower_allocations ma
         LEFT JOIN manpower_request_positions mrp ON ma.request_position_id = mrp.id
         WHERE ma.id = ? AND ma.request_id = ?
-    `).get(parseInt(allocation_id), id);
+    `).get(parseInt(allocation_id), id));
 
     if (!alloc) {
         req.flash('error', 'Worker allocation record not found.');
@@ -346,18 +346,18 @@ router.post('/:id/confirm-arrival', requireAuth, (req, res) => {
     }
 
     if (status_decision === 'did_not_report') {
-        db.prepare(`
+        (await db.prepare(`
             UPDATE manpower_allocations 
-            SET status = 'did_not_report', confirmed_by = ?, confirmed_at = datetime('now'), updated_at = datetime('now')
+            SET status = 'did_not_report', confirmed_by = ?, confirmed_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP()
             WHERE id = ?
-        `).run(user.id, alloc.id);
+        `).run(user.id, alloc.id));
 
-        db.prepare(`
+        (await db.prepare(`
             INSERT INTO manpower_request_entries (request_id, author_id, author_role, content, entry_type, created_at)
-            VALUES (?, ?, ?, ?, 'system', datetime('now'))
-        `).run(id, user.id, user.role, `Worker "${alloc.worker_name || 'Candidate'}" was marked as: DID NOT REPORT FOR DUTY.`);
+            VALUES (?, ?, ?, ?, 'system', UTC_TIMESTAMP())
+        `).run(id, user.id, user.role, `Worker "${alloc.worker_name || 'Candidate'}" was marked as: DID NOT REPORT FOR DUTY.`));
 
-        syncRequestStatus(id);
+        (await syncRequestStatus(id));
         req.flash('warning', 'Worker marked as Did Not Report.');
         return res.redirect(`/manpower/${id}`);
     }
@@ -369,15 +369,14 @@ router.post('/:id/confirm-arrival', requireAuth, (req, res) => {
     // If incoming worker was not an existing employee record, add to masterfile now!
     if (!employeeId) {
         const year = new Date().getFullYear();
-        const count = db.prepare('SELECT COUNT(*) as count FROM employees').get().count;
-        const empCode = `TAAS-${year}-${String(count + 1).padStart(4, '0')}`;
+        const empCode = `TAAS-${year}-${require('crypto').randomUUID().replace(/-/g, '').slice(0, 12).toUpperCase()}`;
         const parts = (alloc.worker_name || 'Worker').trim().split(' ');
         const firstName = parts[0] || 'Worker';
         const lastName = parts.slice(1).join(' ') || 'Employee';
 
-        const empRes = db.prepare(`
+        const empRes = (await db.prepare(`
             INSERT INTO employees (employee_id, first_name, last_name, full_name, area_id, coordinator_id, position_id, employment_start_date, status, remarks, created_at, updated_at, created_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, datetime('now'), datetime('now'), ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, UTC_TIMESTAMP(), UTC_TIMESTAMP(), ?)
         `).run(
             empCode,
             firstName,
@@ -389,31 +388,32 @@ router.post('/:id/confirm-arrival', requireAuth, (req, res) => {
             request.deployment_date,
             `Deployed via Manpower Request #${id}`,
             user.id
-        );
+        ));
 
         employeeId = empRes.lastInsertRowid;
     } else {
         // Update existing employee to this area and coordinator
-        db.prepare(`
+        (await db.prepare(`
             UPDATE employees 
-            SET area_id = ?, coordinator_id = ?, position_id = ?, status = 'active', updated_at = datetime('now'), updated_by = ?
+            SET area_id = ?, coordinator_id = ?, position_id = ?, status = 'active', updated_at = UTC_TIMESTAMP(), updated_by = ?
             WHERE id = ?
-        `).run(request.area_id, user.id, actualPosId, user.id, employeeId);
+        `).run(request.area_id, user.id, actualPosId, user.id, employeeId));
     }
 
     // If schedule provided, create initial schedule
     if (shift_start && shift_end) {
-        db.prepare(`
-            INSERT OR REPLACE INTO employee_schedules (employee_id, work_date, shift_start, shift_end, is_rest_day, created_by, created_at)
-            VALUES (?, ?, ?, ?, 0, ?, datetime('now'))
-        `).run(employeeId, request.deployment_date, shift_start, shift_end, user.id);
+        (await db.prepare(`
+            INSERT INTO employee_schedules (employee_id, work_date, shift_start, shift_end, is_rest_day, created_by, created_at)
+            VALUES (?, ?, ?, ?, 0, ?, UTC_TIMESTAMP())
+        ON DUPLICATE KEY UPDATE shift_start = VALUES(shift_start), shift_end = VALUES(shift_end), is_rest_day = VALUES(is_rest_day)
+        `).run(employeeId, request.deployment_date, shift_start, shift_end, user.id));
     }
 
     // Update allocation record
-    db.prepare(`
+    (await db.prepare(`
         UPDATE manpower_allocations 
-        SET status = 'confirmed', employee_id = ?, confirmed_by = ?, confirmed_at = datetime('now'),
-            actual_position_id = ?, position_change_reason = ?, updated_at = datetime('now')
+        SET status = 'confirmed', employee_id = ?, confirmed_by = ?, confirmed_at = UTC_TIMESTAMP(),
+            actual_position_id = ?, position_change_reason = ?, updated_at = UTC_TIMESTAMP()
         WHERE id = ?
     `).run(
         employeeId,
@@ -421,34 +421,51 @@ router.post('/:id/confirm-arrival', requireAuth, (req, res) => {
         actualPosId,
         position_change_reason ? position_change_reason.trim() : null,
         alloc.id
-    );
+    ));
 
     let confirmMsg = `Worker "${alloc.worker_name || 'Candidate'}" confirmed for duty and added to Active Masterfile!`;
     if (actualPosId !== alloc.requested_position_id) {
         confirmMsg += ` (Position adjusted from requested with reason: ${position_change_reason || 'Operational adjustment'})`;
     }
 
-    db.prepare(`
+    (await db.prepare(`
         INSERT INTO manpower_request_entries (request_id, author_id, author_role, content, entry_type, created_at)
-        VALUES (?, ?, ?, ?, 'system', datetime('now'))
-    `).run(id, user.id, user.role, confirmMsg);
+        VALUES (?, ?, ?, ?, 'system', UTC_TIMESTAMP())
+    `).run(id, user.id, user.role, confirmMsg));
 
-    syncRequestStatus(id);
+    (await syncRequestStatus(id));
 
-    notifyHR(
+    (await notifyHR(
         `Worker Arrival Confirmed: Request #${id}`,
         `Coordinator confirmed arrival of worker for Request #${id}.`,
         `/manpower/${id}`,
         `mp-conf-${id}-${Date.now()}`
-    );
+    ));
 
-    logAction(user.id, 'CONFIRM_WORKER_ARRIVAL', 'manpower_allocations', alloc.id, {
+    (await logAction(user.id, 'CONFIRM_WORKER_ARRIVAL', 'manpower_allocations', alloc.id, {
         employeeId,
         actualPosId
-    });
+    }));
 
     req.flash('success', confirmMsg);
     res.redirect(`/manpower/${id}`);
 });
 
+router.post('/:id/claim', requireAuth, async (req,res) => {
+ if(req.session.user.role !== 'HR') return res.status(403).render('error',{title:'Access Denied',message:'Only HR can accept a manpower request.',code:403});
+ const db=getDb(), id=Number(req.params.id)||0;
+ const claimed=await db.transaction(async()=>{
+  const request=await db.prepare('SELECT id,status,requested_by FROM manpower_requests WHERE id=? FOR UPDATE').get(id);
+  if(!request || ['filled','declined','cancelled'].includes(request.status)) return false;
+  if(await db.prepare('SELECT request_id FROM manpower_request_handlers WHERE request_id=?').get(id)) return false;
+  await db.prepare('INSERT INTO manpower_request_handlers (request_id,hr_id) VALUES (?,?)').run(id,req.session.user.id);
+  await db.prepare("UPDATE manpower_requests SET status=CASE WHEN status='submitted' THEN 'under_review' ELSE status END,updated_at=UTC_TIMESTAMP() WHERE id=?").run(id);
+  await db.prepare("INSERT INTO manpower_request_entries (request_id,author_id,author_role,content,entry_type) VALUES (?,?,'HR',?,'status_change')").run(id,req.session.user.id,req.session.user.full_name+' accepted this request.');
+  await logAction(req.session.user.id,'CLAIM_MANPOWER_REQUEST','manpower_requests',id,{});
+  await createNotification(request.requested_by,'HR accepted your request',req.session.user.full_name+' is handling manpower request #'+id,'/manpower/'+id,'manpower-claim-'+id);
+  return true;
+ })();
+ req.flash(claimed?'success':'warning',claimed?'You are now handling this request.':'This request is already assigned or closed.');
+ res.redirect('/manpower/'+id);
+});
 module.exports = router;

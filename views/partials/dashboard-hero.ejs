@@ -1,0 +1,11 @@
+<section class="workspace-hero" aria-labelledby="workspace-heading">
+    <div class="workspace-hero-copy">
+        <h2 id="workspace-heading">Hello, <%= user.full_name.split(' ')[0] %></h2>
+        <p class="workspace-description">Welcome to your dashboard.</p>
+        <a href="/employees" class="btn btn-primary btn-sm welcome-action">View employees</a>
+    </div>
+    <div class="workspace-context">
+        <strong><%= contextTitle %></strong>
+        <p><%= contextText %></p>
+    </div>
+</section>

@@ -1,16 +1,12 @@
 <%- include('../partials/layout-top') %>
 
-<div class="page-header">
-    <div>
-        <h2>Coordinator Dashboard</h2>
-        <div class="breadcrumb">
-            <span>Area Assignment:</span>
-            <strong style="color: var(--color-primary);"><%= typeof userArea !== 'undefined' && userArea ? userArea.name : 'No Area Assigned' %></strong>
-            <span>•</span>
-            <span>Today: <%= formatDate(today) %></span>
-        </div>
-    </div>
-</div>
+<%- include('../partials/dashboard-hero', {
+    eyebrow: 'Daily attendance and coordination',
+    headline: 'Your team, ready for every working day.',
+    description: 'Manage daily attendance, employee schedules, return-to-work clearances, and staffing requests in one connected workspace.',
+    contextTitle: typeof userArea !== 'undefined' && userArea ? userArea.name : 'Area assignment pending',
+    contextText: typeof today !== 'undefined' ? 'Your assigned workplace · ' + formatDate(today) + ' · Asia/Manila' : 'Your warehouse assignment will appear here once it is approved by HR.'
+}) %>
 
 <% if (typeof noArea !== 'undefined' && noArea) { %>
     <div class="alert alert-warning">
@@ -22,7 +18,7 @@
     <!-- Summary Cards -->
     <div class="summary-cards">
         <div class="summary-card">
-            <div class="card-icon green">✓</div>
+            <div class="card-icon green"><%- include('../partials/outline-icon', {icon:'check'}) %></div>
             <div class="card-data">
                 <h4><%= presentCount %></h4>
                 <p>Present Today</p>
@@ -30,7 +26,7 @@
         </div>
 
         <div class="summary-card">
-            <div class="card-icon red">✕</div>
+            <div class="card-icon red"><%- include('../partials/outline-icon', {icon:'close'}) %></div>
             <div class="card-data">
                 <h4><%= absentCount %></h4>
                 <p>Absent Today</p>
@@ -38,7 +34,7 @@
         </div>
 
         <div class="summary-card">
-            <div class="card-icon yellow">🏥</div>
+            <div class="card-icon yellow"><%- include('../partials/outline-icon', {icon:'medical'}) %></div>
             <div class="card-data">
                 <h4><%= pendingBtw.length %></h4>
                 <p>Pending Back-to-Work</p>
@@ -46,7 +42,7 @@
         </div>
 
         <div class="summary-card">
-            <div class="card-icon blue">🤝</div>
+            <div class="card-icon blue"><%- include('../partials/outline-icon', {icon:'people'}) %></div>
             <div class="card-data">
                 <h4><%= manpowerRequests.length %></h4>
                 <p>Active Manpower Requests</p>
@@ -54,66 +50,69 @@
         </div>
     </div>
 
-    <!-- Coordinator Shortcuts -->
-    <div style="margin-bottom: 24px;">
-        <h3 style="font-size: 0.95rem; font-weight: 600; color: var(--color-gray-600); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Quick Actions</h3>
-        <div class="action-grid">
-            <a href="/attendance?date=<%= today %>" class="action-card">
-                <div class="action-icon">📋</div>
-                <div class="action-label">Mark Attendance</div>
-            </a>
-            <a href="/employees/new" class="action-card">
-                <div class="action-icon">➕</div>
-                <div class="action-label">Add Employee</div>
-            </a>
-            <a href="/manpower/new" class="action-card">
-                <div class="action-icon">🤝</div>
-                <div class="action-label">Request Manpower</div>
-            </a>
-            <a href="/concerns/new" class="action-card">
-                <div class="action-icon">💬</div>
-                <div class="action-label">Report Concern</div>
-            </a>
-        </div>
-    </div>
+    <%- include('../partials/dashboard-shortcuts', { shortcuts: [
+        { href: '/attendance?date=' + today, label: 'Mark attendance' },
+        { href: '/employees/new', label: 'Add employee' },
+        { href: '/manpower/new', label: 'Request manpower' },
+        { href: '/concerns/new', label: 'Report concern' }
+    ] }) %>
 
     <!-- Coordinator's Own Attendance Status -->
-    <div class="card mb-3">
-        <div class="card-header">
-            <h3>⏱️ My Daily Attendance</h3>
-            <span><%= formatDate(today) %></span>
+    <div class="card mb-3" style="border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+        <div class="card-header" style="background: linear-gradient(135deg, #1b2a4a 0%, #2a437c 100%); color: #ffffff; border-top-left-radius: 12px; border-top-right-radius: 12px; padding: 14px 20px;">
+            <h3 style="margin: 0; color: #ffffff; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+                <span>⏱️</span>
+                <span>My Daily Attendance</span>
+            </h3>
+            <span style="color: rgba(255,255,255,0.8); font-size: 0.85rem;"><%= formatDate(today) %></span>
         </div>
-        <div class="card-body">
+        <div class="card-body" style="padding: 18px 20px;">
             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
                 <div>
                     <% if (!ownAttendance) { %>
-                        <p style="color: var(--color-gray-600); font-size: 0.9rem;">You have not timed in for today's shift yet.</p>
-                    <% } else { %>
-                        <p style="font-size: 0.9rem;">
-                            Time-In: <strong style="color: var(--color-success);"><%= formatTime(ownAttendance.time_in) %></strong>
-                            <% if (ownAttendance.time_out) { %>
-                                • Time-Out: <strong style="color: var(--color-primary);"><%= formatTime(ownAttendance.time_out) %></strong>
-                            <% } else { %>
-                                • <span class="badge badge-warning">Shift In Progress</span>
-                            <% } %>
+                        <p style="color: var(--color-gray-600); font-size: 0.9rem; margin: 0 0 6px 0;">
+                            You have not timed in for today's shift yet. Click <strong>Camera Time-In</strong> below to take your photo.
                         </p>
+                    <% } else { %>
+                        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="font-size: 0.85rem; color: #64748b;">Time-In:</span>
+                                <strong style="color: var(--color-success); font-size: 1.05rem;"><%= formatTime(ownAttendance.time_in) %></strong>
+                                <% if (ownAttendance.time_in_photo) { %>
+                                    <img src="<%= ownAttendance.time_in_photo %>" onclick="openLightbox(this.src)" title="Time-In Photo (Click to zoom)" alt="Time-In Photo" style="width:34px;height:34px;border-radius:6px;object-fit:cover;border:2px solid #059669;cursor:pointer;">
+                                <% } %>
+                            </div>
+
+                            <% if (ownAttendance.time_out) { %>
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-size: 0.85rem; color: #64748b;">• Time-Out:</span>
+                                    <strong style="color: var(--color-primary); font-size: 1.05rem;"><%= formatTime(ownAttendance.time_out) %></strong>
+                                    <% if (ownAttendance.time_out_photo) { %>
+                                        <img src="<%= ownAttendance.time_out_photo %>" onclick="openLightbox(this.src)" title="Time-Out Photo (Click to zoom)" alt="Time-Out Photo" style="width:34px;height:34px;border-radius:6px;object-fit:cover;border:2px solid #2563eb;cursor:pointer;">
+                                    <% } %>
+                                </div>
+                            <% } else { %>
+                                <span class="badge badge-warning" style="padding: 4px 10px; font-weight: 600;">Shift In Progress</span>
+                            <% } %>
+                        </div>
                     <% } %>
                 </div>
-                <div class="btn-group">
+                <div class="btn-group" style="display: flex; align-items: center; gap: 10px;">
                     <% if (!ownAttendance) { %>
-                        <form action="/coordinator-attendance/time-in" method="POST" style="display: inline;">
-                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                            <button type="submit" class="btn btn-success">⏱️ Record Time-In</button>
-                        </form>
+                        <button type="button" class="btn btn-success" onclick="openWebcam('time-in', '/dashboard')" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700; padding: 10px 18px; border-radius: 8px; box-shadow: 0 2px 8px rgba(5,150,105,0.25);">
+                            📸 Camera Time-In
+                        </button>
                     <% } else if (!ownAttendance.time_out) { %>
-                        <form action="/coordinator-attendance/time-out" method="POST" style="display: inline;">
-                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                            <button type="submit" class="btn btn-primary">⏱️ Record Time-Out</button>
-                        </form>
+                        <button type="button" class="btn btn-primary" onclick="openWebcam('time-out', '/dashboard')" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700; padding: 10px 18px; border-radius: 8px; box-shadow: 0 2px 8px rgba(37,99,235,0.25);">
+                            📸 Camera Time-Out
+                        </button>
                     <% } else { %>
-                        <span class="badge badge-success" style="padding: 8px 14px; font-size: 0.85rem;">Shift Completed</span>
+                        <span class="badge badge-success" style="padding: 8px 16px; font-size: 0.88rem; font-weight: 700;">✅ Shift Completed</span>
                     <% } %>
-                    <a href="/coordinator-attendance" class="btn btn-outline btn-sm">View Log / Request Correction</a>
+                    <a href="/coordinator-attendance" class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+                        <span>📋</span>
+                        <span>Full Log</span>
+                    </a>
                 </div>
             </div>
         </div>
@@ -195,5 +194,7 @@
     </div>
 
 <% } %>
+
+<%- include('../partials/attendance-webcam-modal') %>
 
 <%- include('../partials/layout-bottom') %>

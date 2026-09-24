@@ -1,26 +1,26 @@
 // Area guard middleware - ensures coordinators can only access their assigned area's data
 const { getDb } = require('../db/database');
 
-function getCoordinatorAreaId(userId) {
+async function getCoordinatorAreaId(userId) {
     const db = getDb();
-    const assignment = db.prepare(
+    const assignment = (await db.prepare(
         'SELECT area_id FROM coordinator_area_assignments WHERE user_id = ? AND is_current = 1'
-    ).get(userId);
+    ).get(userId));
     return assignment ? assignment.area_id : null;
 }
 
 // Middleware: attach current area to request for coordinators
-function attachArea(req, res, next) {
+async function attachArea(req, res, next) {
     if (!req.session.user) return next();
     
     if (req.session.user.role === 'COORDINATOR') {
-        const areaId = getCoordinatorAreaId(req.session.user.id);
+        const areaId = (await getCoordinatorAreaId(req.session.user.id));
         req.userAreaId = areaId;
         res.locals.userAreaId = areaId;
         
         if (areaId) {
             const db = getDb();
-            const area = db.prepare('SELECT * FROM areas WHERE id = ?').get(areaId);
+            const area = (await db.prepare('SELECT * FROM areas WHERE id = ?').get(areaId));
             req.userArea = area;
             res.locals.userArea = area;
         }

@@ -1,166 +1,55 @@
 <%- include('../partials/layout-top') %>
-
-<div class="page-header">
-    <div>
-        <h2>HR Management Dashboard</h2>
-        <div class="breadcrumb">
-            <span>Operational Date: <%= formatDate(today) %></span>
-            <span>•</span>
-            <span>System-Wide Attendance & Clearance Overview</span>
-        </div>
-    </div>
+<%- include('../partials/dashboard-hero', {
+    eyebrow: 'Attendance and workforce management',
+    headline: 'One workforce view, from schedule to attendance.',
+    description: 'A connected workspace for employee attendance, schedules, back-to-work clearances, and manpower requests inside TAASCOR ETS.',
+    contextTitle: 'Your HR workspace',
+    contextText: 'Review attendance across departments, follow up on absences, and keep every employee record connected.'
+}) %>
+<div class="summary-grid hr-summary">
+    <a class="summary-card" href="/employees"><div class="card-data"><h4><%= employees.length %></h4><p>Active employees</p></div></a>
+    <button class="summary-card" type="button" data-att-filter="present"><div class="card-data"><h4><%= employees.filter(e => ['present','late'].includes(e.actual)).length %></h4><p>Present <small>(includes late)</small></p></div></button>
+    <button class="summary-card" type="button" data-att-filter="absent"><div class="card-data"><h4><%= employees.filter(e => e.actual === 'absent').length %></h4><p>Absent</p></div></button>
+    <button class="summary-card" type="button" data-att-filter="unmarked"><div class="card-data"><h4><%= employees.filter(e => e.actual === 'unmarked').length %></h4><p>Unmarked attendance</p></div></button>
+    <a class="summary-card" href="#btw-alert"><div class="card-data"><h4><%= alerts.length %></h4><p>Employees needing BTW</p></div></a>
 </div>
-
-<!-- Summary Cards -->
-<div class="summary-cards">
-    <div class="summary-card">
-        <div class="card-icon green">👥</div>
-        <div class="card-data">
-            <h4><%= systemAtt.presentCount %></h4>
-            <p>Employees Present</p>
-        </div>
+<%- include('../partials/dashboard-shortcuts', { shortcuts: [
+    { href: '/attendance?date=' + date, label: 'Attendance' },
+    { href: '/schedules?date=' + date, label: 'Employee schedules' },
+    { href: '/btw', label: 'Back-to-work clearance' },
+    { href: '/manpower', label: 'Manpower requests' }
+] }) %>
+<div class="dashboard-toolbar"><p>Attendance overview · <%= formatDate(date) %></p><form method="GET" class="status-filters"><label for="dashboard-date">Work date<input class="form-control" type="date" id="dashboard-date" name="date" value="<%= date %>" required></label><button class="btn btn-outline">View</button></form></div>
+<details id="btw-alert" class="card mb-3 hr-btw-alert" <%= alerts.length ? 'open' : '' %>>
+    <summary><strong><%= alerts.length %> employees need BTW clearance</strong><span class="text-muted"> · All unresolved absence dates</span></summary>
+    <div class="card-body"><% if (!alerts.length) { %><p>No outstanding absence clearances.</p><% } %>
+        <% alerts.slice(0,8).forEach(e => { %><button class="btn btn-sm btn-outline" type="button" data-employee-status="<%= e.id %>"><%= e.full_name %> · <%= e.dept_name || 'Unassigned' %> · <%= e.absence_count %> uncleared absent day(s)</button> <% }) %>
+        <a href="/btw" class="btn btn-sm btn-ghost">View all BTW cases</a>
+        <% if (alerts.length > 8) { %><details><summary>Show all <%= alerts.length %> employees</summary><% alerts.slice(8).forEach(e => { %><button class="btn btn-sm btn-outline" type="button" data-employee-status="<%= e.id %>"><%= e.full_name %> · <%= e.absence_count %> day(s)</button> <% }) %></details><% } %>
     </div>
-
-    <div class="summary-card">
-        <div class="card-icon red">❌</div>
-        <div class="card-data">
-            <h4><%= systemAtt.absentCount %></h4>
-            <p>Employees Absent</p>
-        </div>
-    </div>
-
-    <div class="summary-card">
-        <div class="card-icon yellow">🏥</div>
-        <div class="card-data">
-            <h4><%= pendingBtw.length %></h4>
-            <p>Pending BTW Clearances</p>
-        </div>
-    </div>
-
-    <div class="summary-card">
-        <div class="card-icon blue">⏳</div>
-        <div class="card-data">
-            <h4><%= pendingCoordinators.length %></h4>
-            <p>Pending Registrations</p>
-        </div>
-    </div>
-</div>
-
-<!-- Needs Your Action Section -->
+</details>
 <div class="card mb-3">
-    <div class="card-header">
-        <h3>⚡ Needs Your Action</h3>
-        <span class="badge badge-primary"><%= pendingCoordinators.length + pendingBtw.length + activeConcerns.length + activeManpower.length %> Total</span>
-    </div>
-    <div class="card-body" style="padding: 0;">
-        <ul class="action-list">
-            <% pendingCoordinators.forEach(c => { %>
-                <li class="action-list-item">
-                    <div class="item-info">
-                        <div class="item-title">Coordinator Registration: <%= c.full_name %> (<%= c.email %>)</div>
-                        <div class="item-subtitle">Awaiting HR approval and warehouse area assignment</div>
-                    </div>
-                    <a href="/admin/pending-coordinators" class="btn btn-sm btn-warning">Review & Assign Area</a>
-                </li>
-            <% }) %>
-
-            <% pendingBtw.forEach(b => { %>
-                <li class="action-list-item">
-                    <div class="item-info">
-                        <div class="item-title">Back-to-Work Clearance: <%= b.full_name %> (<%= b.emp_code %>)</div>
-                        <div class="item-subtitle">Area: <%= b.area_name %> • Case: <%= b.case_ref %> • Status: <%= b.status.replace(/_/g, ' ') %></div>
-                    </div>
-                    <a href="/btw/<%= b.id %>" class="btn btn-sm btn-primary">Review & Decide</a>
-                </li>
-            <% }) %>
-
-            <% activeConcerns.forEach(c => { %>
-                <li class="action-list-item">
-                    <div class="item-info">
-                        <div class="item-title">Employee Concern: <%= c.full_name %> — <%= c.category %></div>
-                        <div class="item-subtitle">Area: <%= c.area_name %> • Coordinator: <%= c.coordinator_name || 'Assigned' %></div>
-                    </div>
-                    <a href="/concerns/<%= c.id %>" class="btn btn-sm btn-outline">Provide Instructions</a>
-                </li>
-            <% }) %>
-
-            <% activeManpower.forEach(m => { %>
-                <li class="action-list-item">
-                    <div class="item-info">
-                        <div class="item-title">Manpower Request: <%= m.area_name %> (Deployment: <%= formatDate(m.deployment_date) %>)</div>
-                        <div class="item-subtitle">Needed: <%= m.total_requested %> workers • Proposed: <%= m.proposed_count %> • Confirmed: <%= m.confirmed_count %></div>
-                    </div>
-                    <a href="/manpower/<%= m.id %>" class="btn btn-sm btn-primary">Assign Workers</a>
-                </li>
-            <% }) %>
-
-            <% if (pendingCoordinators.length === 0 && pendingBtw.length === 0 && activeConcerns.length === 0 && activeManpower.length === 0) { %>
-                <li style="padding: 24px; text-align: center; color: var(--color-gray-500);">All action items are clear!</li>
-            <% } %>
-        </ul>
-    </div>
+    <div class="card-header"><h3>Attendance by department</h3><a href="/schedules?date=<%= date %>" class="btn btn-sm btn-ghost">Schedules</a></div>
+    <div class="table-responsive"><table class="data-table"><thead><tr><th>Department / Area</th><th>Present</th><th>Absent</th><th>RD</th><th>Unmarked</th><th>Total</th></tr></thead><tbody>
+        <% departments.forEach(d => { %><tr><td><button class="btn btn-sm btn-ghost" type="button" data-department="<%= d.key %>"><%= d.name %></button><small class="text-muted"><%= d.area %></small></td><td><%= d.present %></td><td><%= d.absent %></td><td><%= d.rest %></td><td><%= d.unmarked %></td><td><%= d.total %></td></tr><% }) %>
+        <% if (!departments.length) { %><tr><td colspan="6">No active employees.</td></tr><% } %>
+    </tbody></table></div>
+    <details id="hr-employee-details"><summary>View employee schedules & attendance</summary><div class="card-body">
+        <div class="status-filters"><label>Department<select class="form-control" id="hr-department"><option value="">All departments</option><% departments.forEach(d => { %><option value="<%= d.key %>"><%= d.name %> · <%= d.area %></option><% }) %></select></label><label>Attendance<select class="form-control" id="hr-attendance"><option value="">All statuses</option><option value="present">Present / Late</option><option value="absent">Absent</option><option value="rest_day">Rest Day</option><option value="unmarked">Unmarked</option><option value="on_leave">Leave</option></select></label><label>Search<input class="form-control" id="hr-search" placeholder="Employee name"></label></div>
+        <div class="table-responsive"><table class="data-table"><thead><tr><th>Employee</th><th>Scheduled shift / RD</th><th>Actual attendance</th><th>Absent this month</th><th>Employee / BTW status</th></tr></thead><tbody id="hr-employees">
+        <% employees.forEach(e => { %><tr data-department="<%= e.department_key %>" data-attendance="<%= e.actual %>" data-name="<%= e.full_name.toLowerCase() %>"><td><a href="/employees/<%= e.id %>"><%= e.full_name %></a><br><small class="text-muted"><%= e.dept_name || 'Unassigned' %></small></td><td><%= e.is_rest_day ? 'Rest Day' : e.schedule_id ? (e.shift_start || '—') + ' – ' + (e.shift_end || '—') : 'No schedule' %></td><td><%= (e.att_status || 'unmarked').replace(/_/g,' ') %><% if(e.is_rest_day && e.att_status === 'absent') { %><small> · Scheduled RD; excluded from absences</small><% } %></td><td><button class="btn btn-sm btn-ghost" type="button" data-employee-status="<%= e.id %>" data-from="<%= monthStart %>" data-to="<%= monthEnd %>"><%= e.absence_count %> days · Dates</button></td><td><button class="btn btn-sm btn-outline" type="button" data-employee-status="<%= e.id %>"><%= ({approved:'Approved',not_approved:'Rejected',pending_hr_review:'Pending HR review',for_clarification:'For clarification'})[e.btw_status] || 'View status' %></button></td></tr><% }) %>
+        </tbody></table><p id="hr-empty" hidden>No employees match these filters.</p></div>
+    </div></details>
 </div>
-
-<!-- Coordinator Daily Attendance Monitor -->
-<div class="card">
-    <div class="card-header">
-        <h3>⏱️ Coordinator Attendance Today (<%= formatDate(today) %>)</h3>
-        <a href="/coordinator-attendance" class="btn btn-sm btn-outline">View Attendance Logs</a>
-    </div>
-    <div class="card-body" style="padding: 0;">
-        <div class="table-responsive">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Coordinator</th>
-                        <th>Assigned Warehouse</th>
-                        <th>Time-In</th>
-                        <th>Time-Out</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <% if (coordinatorAttendanceToday.length === 0) { %>
-                        <tr>
-                            <td colspan="5" class="text-center">No active coordinators found.</td>
-                        </tr>
-                    <% } else { %>
-                        <% coordinatorAttendanceToday.forEach(c => { %>
-                            <tr>
-                                <td><strong><%= c.full_name %></strong></td>
-                                <td><%= c.area_name || 'Unassigned' %></td>
-                                <td>
-                                    <% if (c.time_in) { %>
-                                        <span style="color: var(--color-success); font-weight: 600;"><%= formatTime(c.time_in) %></span>
-                                    <% } else { %>
-                                        <span class="text-muted">Not recorded</span>
-                                    <% } %>
-                                </td>
-                                <td>
-                                    <% if (c.time_out) { %>
-                                        <span style="color: var(--color-primary); font-weight: 600;"><%= formatTime(c.time_out) %></span>
-                                    <% } else { %>
-                                        <span class="text-muted">—</span>
-                                    <% } %>
-                                </td>
-                                <td>
-                                    <% if (c.correction_requested) { %>
-                                        <span class="badge badge-warning">Correction Pending</span>
-                                    <% } else if (c.time_out) { %>
-                                        <span class="badge badge-success">Shift Completed</span>
-                                    <% } else if (c.time_in) { %>
-                                        <span class="badge badge-info">On Duty</span>
-                                    <% } else { %>
-                                        <span class="badge badge-secondary">Pending</span>
-                                    <% } %>
-                                </td>
-                            </tr>
-                        <% }) %>
-                    <% } %>
-                </tbody>
-            </table>
-        </div>
-    </div>
+<div class="hr-bottom-grid">
+    <div class="card"><div class="card-header"><h3>Coordinator time-in</h3><a href="/coordinator-attendance?view=monitor&amp;date=<%= date %>" class="btn btn-sm btn-ghost">View all</a></div><div class="card-body">
+        <% coordinators.slice(0,5).forEach(c => { %><div class="hr-compact-row"><div><strong><%= c.full_name %></strong><br><small class="text-muted"><%= c.area_name || 'Unassigned' %></small></div><span><%= c.time_in ? formatDateTime(c.time_in) : 'Not yet timed in' %></span></div><% }) %>
+        <% if (!coordinators.length) { %><p>No active coordinators.</p><% } %>
+    </div></div>
+    <div class="card"><div class="card-header"><h3>Manpower requests</h3><a href="/manpower" class="btn btn-sm btn-ghost">View all</a></div><div class="card-body">
+        <% manpower.forEach(m => { %><a class="hr-compact-row" href="/manpower/<%= m.id %>"><div><strong><%= m.area_name %> · <%= m.total_requested %> workers</strong><br><small><%= formatDate(m.deployment_date) %></small></div><span><%= m.status.replace(/_/g,' ') %></span></a><% }) %>
+        <% if (!manpower.length) { %><p>No pending manpower requests.</p><% } %>
+    </div></div>
 </div>
-
+<script src="/js/hr-dashboard.js"></script>
 <%- include('../partials/layout-bottom') %>

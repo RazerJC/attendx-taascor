@@ -1,6 +1,6 @@
 // Authentication middleware
 
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
     if (!req.session.user) {
         req.flash('error', 'Please log in to continue.');
         return res.redirect('/login');
@@ -9,7 +9,7 @@ function requireAuth(req, res, next) {
     // Check if user is still active
     const { getDb } = require('../db/database');
     const db = getDb();
-    const user = db.prepare('SELECT status, role FROM users WHERE id = ?').get(req.session.user.id);
+    const user = (await db.prepare('SELECT status, role FROM users WHERE id = ?').get(req.session.user.id));
     
     if (!user || user.status !== 'active') {
         req.session.destroy();

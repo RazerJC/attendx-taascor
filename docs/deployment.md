@@ -1,172 +1,88 @@
-# TAASCOR Attendance Monitoring System — Deployment & Maintenance Guide
-**Company**: TAASCOR Management & General Services Corp.
+# Hostinger deployment and MySQL migration
 
----
+This application uses Node.js, Express, EJS, and MySQL. Login sessions are stored in the same MySQL database. Application restarts do not discard active sessions as long as SESSION_SECRET stays unchanged.
 
-## 1. System Requirements
-- **Runtime**: Node.js v20.x or v24.x LTS
-- **Package Manager**: npm v10+
-- **Database Engine**: Built-in SQLite via Node.js native `node:sqlite` (zero external database server required)
-- **Memory**: Minimum 512 MB RAM (1 GB recommended)
-- **Disk**: 100 MB for application files + storage for database snapshots
+## Requirements
 
----
+- Hostinger Business Web Hosting or a Cloud plan with Node.js Web Apps enabled, or a VPS.
+- Node.js 22 or 24, MySQL 8.0.16+ or MariaDB 10.4+.
+- A database and database user created in hPanel. Use the exact database hostname, name, username, and password shown by Hostinger.
+- HTTPS for production cookies and an SMTP mailbox for verification and password-reset emails.
 
-## 2. Installation & First-Time Setup
+Official deployment instructions: https://www.hostinger.com/support/how-to-deploy-a-nodejs-website-in-hostinger/
 
-1. **Clone or copy the application files to the production directory**:
-   ```bash
-   cd /var/www/taascor
-   ```
+## Prepare a new database
 
-2. **Install production dependencies**:
-   ```bash
-   npm install --omit=dev
-   ```
+Copy .env.example to .env for local commands, or set the values in the hosting panel:
 
-3. **Configure Environment Variables**:
-   Copy `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` with your production settings:
-   ```ini
-   PORT=3000
-   NODE_ENV=production
-   SESSION_SECRET=generate-a-strong-random-64-character-string-here
+- DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+- DB_CONNECTION_LIMIT (default 5; respect your hosting account limits)
+- DB_SSL=true only when the database endpoint supports/requires TLS. DB_SSL_CA can point to the provider CA file. Certificate validation remains enabled.
+- SESSION_SECRET: generate a random value with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
+- ADMIN_EMAIL and a unique ADMIN_PASSWORD of at least 12 characters. These are used only when no administrator exists.
+- NODE_ENV=production, APP_URL=https://your-domain, TZ=Asia/Manila
+- SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS, SMTP_FROM
 
-   # Initial Admin Credentials (used only on first database initialization)
-   ADMIN_EMAIL=admin@taascor.com
-   ADMIN_PASSWORD=SecureAdminPassword2026!
+Never commit .env or database backups. Keep SESSION_SECRET unchanged across deployments to preserve logins.
 
-   # Hostinger / Production SMTP Mailer Settings
-   SMTP_HOST=smtp.hostinger.com
-   SMTP_PORT=465
-   SMTP_SECURE=true
-   SMTP_USER=noreply@taascor.com
-   SMTP_PASS=YourStrongMailboxPasswordHere
-   SMTP_FROM="TAASCOR System <noreply@taascor.com>"
+For a fresh installation:
 
-   APP_URL=https://attendance.taascor.com
-   TZ=Asia/Manila
-   ```
-
-4. **Initialize Database & Seed Data (Optional)**:
-   ```bash
-   npm run seed
-   ```
-
----
-
-## 3. Production Process Management with PM2
-
-Install PM2 globally:
-```bash
-npm install -g pm2
+```sh
+npm ci
+npm run db:init
+npm start
 ```
 
-Start the application with PM2:
-```bash
-pm2 start server.js --name "taascor-attendance"
-pm2 save
-pm2 startup
+Startup also creates missing tables and the first administrator. It fails before listening if the database is unavailable. The database user needs CREATE and normal SELECT/INSERT/UPDATE/DELETE permissions for automatic initialization. Tables use InnoDB, foreign keys, unique constraints, UTF-8, and UTC timestamps.
+
+## Import the existing SQLite database
+
+Perform the import before starting the web application or running db:init (which creates an administrator). Stop writes in the old application, retain a backup, and point the environment to a NEW EMPTY MySQL database.
+
+```sh
+npm ci
+npm run db:import-sqlite -- "/absolute/path/to/taascor.db"
+npm start
 ```
 
----
+Run the importer from a machine allowed to connect to the destination database. If Hostinger restricts remote MySQL access, use its supported remote access setup or import on a machine with permitted connectivity.
 
-## 4. Nginx Reverse Proxy Configuration (with SSL)
+The importer opens SQLite read-only, reads a consistent snapshot, checks source foreign keys, preserves IDs/password hashes, converts ISO timestamps to UTC, checks row counts, and commits the data in one transaction. It refuses nonempty targets, unknown source columns, and invalid calendar dates. Dates must use YYYY-MM-DD with a year of at least 1000; ambiguous legacy dates are never guessed. Errors identify the table/record and roll back imported rows; newly created empty tables may remain. Do not run the web application during import. The importer does not create sessions; users log in again after migrating from SQLite.
 
-Create `/etc/nginx/sites-available/taascor`:
-```nginx
-server {
-    listen 80;
-    server_name attendance.taascor.com;
-    return 301 https://$host$request_uri;
-}
+Keep the original SQLite file locally until the migrated records have been checked. It is excluded from uploads and Docker builds. Newly uploaded profile photos (up to 2MB) are stored in MySQL. Existing photos referenced by local paths must be re-uploaded through the profile page or copied with the corresponding static files before retiring the old application.
 
-server {
-    listen 443 ssl http2;
-    server_name attendance.taascor.com;
+## Deploy from GitHub
 
-    ssl_certificate /etc/letsencrypt/live/attendance.taascor.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/attendance.taascor.com/privkey.pem;
+1. In Hostinger, add a Node.js Web App and connect the employee-tracking-system repository.
+2. Choose the branch containing this MySQL application and the Express framework.
+3. Select Node.js 22 or 24. Set entry file to server.js and start command to npm start.
+4. Install dependencies with npm ci --omit=dev. EJS and static assets need no frontend compilation or dist directory.
+5. Set the environment variables above. Hostinger may supply PORT; let the application use it.
+6. Deploy, connect the domain, and enable HTTPS.
+7. Check /health, log in, verify attendance and reports, and test an email verification or password-reset message.
+8. Redeploy once and verify the same login still works and attendance remains present.
 
-    client_max_body_size 10M;
+Do not use npm run seed on production. It creates demo records and accounts and is disabled under NODE_ENV=production.
 
-    location / {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
+## Tests
 
-    location /images/ {
-        alias /var/www/taascor/public/images/;
-        expires 30d;
-        add_header Cache-Control "public, no-transform";
-    }
+`npm test` runs the time-handling tests. Database integration tests run when TEST_DB_HOST and TEST_DB_USER are supplied; TEST_DB_PORT and TEST_DB_PASSWORD are optional.
 
-    location /css/ {
-        alias /var/www/taascor/public/css/;
-        expires 7d;
-    }
-}
+```powershell
+$env:TEST_DB_HOST = '127.0.0.1'
+$env:TEST_DB_PORT = '3306'
+$env:TEST_DB_USER = 'test_user'
+npm test
 ```
 
-Enable the configuration and reload Nginx:
-```bash
-ln -s /etc/nginx/sites-available/taascor /etc/nginx/sites-enabled/
-nginx -t
-systemctl reload nginx
-```
+The test user needs CREATE/DROP DATABASE permission. Tests create and remove only a unique taascor_test_* database. They cover schema constraints, SQLite import, rollback, the eight business verification scenarios, simultaneous absence submissions, role access, report rendering, and session persistence across restarts. Never point tests at production credentials.
 
----
+## Backups and recovery
 
-## 5. Hostinger VPS / Shared Hosting Specific Notes
+Use Hostinger database backups or phpMyAdmin export. On a machine with a MySQL dump client, npm run backup creates a consistent SQL dump under db/backups. MYSQLDUMP_PATH can point to mysqldump or mariadb-dump. Database passwords are passed via the subprocess environment, not command-line arguments. For TLS endpoints use a dump client configured with verified TLS or the provider backup tools.
 
-- **Hostinger VPS**: Recommended environment. Follow the standard Node.js + PM2 + Nginx instructions above.
-- **Hostinger Cloud / cPanel Node.js Selector**:
-  1. In hPanel, open **Advanced** → **Node.js**.
-  2. Select Node.js version **20.x or 22.x/24.x**.
-  3. Set Application root to `/home/user/public_html/attendance`.
-  4. Set Application startup file to `server.js`.
-  5. Run `NPM Install` via the cPanel interface.
-  6. Add environment variables in the cPanel environment section.
+Restore a backup into a separate empty database and check its records before changing DB_NAME. Backups contain private workforce data and must be stored securely.
 
----
+## Legacy utilities
 
-## 6. Database Backup & Disaster Recovery
-
-### Creating Backups
-The database is stored as a single SQLite file at `db/taascor.db`. To take an instant snapshot without shutting down the application (using WAL checkpointing):
-```bash
-npm run backup
-```
-Backups are saved to `db/backups/taascor_backup_YYYY-MM-DDTHH-mm-ss.db`.
-
-### Automated Nightly Backup via Cron
-Add this entry to your server crontab (`crontab -e`):
-```cron
-0 2 * * * cd /var/www/taascor && node db/backup.js >> /var/log/taascor-backup.log 2>&1
-```
-
-### Restoring from Backup
-In case of server migration or disaster recovery:
-1. Stop the application:
-   ```bash
-   pm2 stop taascor-attendance
-   ```
-2. Replace `db/taascor.db` with the snapshot:
-   ```bash
-   cp db/backups/taascor_backup_TARGET.db db/taascor.db
-   rm -f db/taascor.db-wal db/taascor.db-shm
-   ```
-3. Restart the application:
-   ```bash
-   pm2 restart taascor-attendance
-   ```
+Old one-off SQLite maintenance tools are archived locally under db/legacy-sqlite and excluded from uploads. db/schema.sqlite.sql is retained for import tests. All application routes, services, authentication, and session storage use db/database.js (MySQL); SQLite is used only by the explicit migration command and its tests.

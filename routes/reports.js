@@ -2,12 +2,12 @@ const express = require('express');
 const router = express.Router();
 const ExcelJS = require('exceljs');
 const { requireAuth } = require('../middleware/auth');
-const { validateAreaAccess } = require('../middleware/area-guard');
+const { validateAreaAccess, requireArea } = require('../middleware/area-guard');
 const { getDb } = require('../db/database');
 const { DateTime } = require('luxon');
 
 // GET /reports
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, requireArea, async (req, res) => {
     const user = req.session.user;
     const db = getDb();
     const today = DateTime.now().setZone('Asia/Manila').toFormat('yyyy-MM-dd');
@@ -33,7 +33,7 @@ router.get('/', requireAuth, (req, res) => {
 
     const whereClause = 'WHERE ' + where.join(' AND ');
 
-    const records = db.prepare(`
+    const records = (await db.prepare(`
         SELECT ea.*, e.employee_id as emp_code, e.full_name as employee_name,
                a.name as area_name, p.title as position_title, u.full_name as recorder_name
         FROM employee_attendance ea
@@ -44,9 +44,9 @@ router.get('/', requireAuth, (req, res) => {
         ${whereClause}
         ORDER BY ea.work_date DESC, e.full_name ASC
         LIMIT 200
-    `).all(...params);
+    `).all(...params));
 
-    const areas = user.role !== 'COORDINATOR' ? db.prepare('SELECT * FROM areas WHERE is_active = 1 ORDER BY name ASC').all() : [];
+    const areas = user.role !== 'COORDINATOR' ? (await db.prepare('SELECT * FROM areas WHERE is_active = 1 ORDER BY name ASC').all()) : [];
 
     res.render('reports/index', {
         title: 'Attendance Reports - TAASCOR',
@@ -60,7 +60,7 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // GET /reports/export (CSV or Excel)
-router.get('/export', requireAuth, async (req, res) => {
+router.get('/export', requireAuth, requireArea, async (req, res) => {
     const user = req.session.user;
     const db = getDb();
     const format = req.query.format === 'csv' ? 'csv' : 'xlsx';
@@ -83,7 +83,7 @@ router.get('/export', requireAuth, async (req, res) => {
         params.push(selectedStatus);
     }
 
-    const records = db.prepare(`
+    const records = (await db.prepare(`
         SELECT ea.work_date, e.employee_id, e.full_name, a.name as area_name,
                p.title as position_title, ea.status, ea.time_in, ea.time_out,
                ea.remarks, u.full_name as recorded_by_name
@@ -94,7 +94,7 @@ router.get('/export', requireAuth, async (req, res) => {
         LEFT JOIN users u ON ea.recorded_by = u.id
         WHERE ${where.join(' AND ')}
         ORDER BY ea.work_date DESC, e.full_name ASC
-    `).all(...params);
+    `).all(...params));
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'TAASCOR Attendance System';

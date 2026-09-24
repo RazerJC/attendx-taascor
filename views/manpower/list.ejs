@@ -68,7 +68,7 @@
                 <thead>
                     <tr>
                         <th>Request #</th>
-                        <th>Warehouse</th>
+                        <th>Warehouse</th><th>Assigned HR</th>
                         <th>Deployment Date</th>
                         <th>Requested</th>
                         <th>Proposed</th>
@@ -80,7 +80,7 @@
                 <tbody>
                     <% if (requests.length === 0) { %>
                         <tr>
-                            <td colspan="8">
+                            <td colspan="9">
                                 <div class="empty-state">
                                     <div class="empty-icon">🤝</div>
                                     <h3>No manpower requests found</h3>
@@ -92,7 +92,7 @@
                         <% requests.forEach(r => { %>
                             <tr>
                                 <td><strong>#<%= r.id %></strong></td>
-                                <td><%= r.area_name %></td>
+                                <td><%= r.area_name %></td><td><%= r.handler_name || "Awaiting acceptance" %></td>
                                 <td><strong><%= formatDate(r.deployment_date) %></strong></td>
                                 <td><span class="badge badge-secondary"><%= r.total_requested %> workers</span></td>
                                 <td><span class="badge badge-warning"><%= r.proposed_count %> proposed</span></td>

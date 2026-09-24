@@ -23,15 +23,15 @@ function requireAdmin(req, res, next) {
 }
 
 // GET /admin/pending-coordinators (HR & ADMIN)
-router.get('/pending-coordinators', requireAuth, requireAdminOrHR, (req, res) => {
+router.get('/pending-coordinators', requireAuth, requireAdminOrHR, async (req, res) => {
     const db = getDb();
-    const pendingList = db.prepare(`
+    const pendingList = (await db.prepare(`
         SELECT * FROM users 
         WHERE role = 'COORDINATOR' AND status = 'pending'
         ORDER BY created_at ASC
-    `).all();
+    `).all());
 
-    const areas = db.prepare('SELECT * FROM areas WHERE is_active = 1 ORDER BY name ASC').all();
+    const areas = (await db.prepare('SELECT * FROM areas WHERE is_active = 1 ORDER BY name ASC').all());
 
     res.render('admin/pending-coordinators', {
         title: 'Pending Coordinator Registrations - TAASCOR',
@@ -51,46 +51,46 @@ router.post('/approve-coordinator', requireAuth, requireAdminOrHR, async (req, r
         return res.redirect('/admin/pending-coordinators');
     }
 
-    const coordinator = db.prepare('SELECT * FROM users WHERE id = ? AND role = "COORDINATOR"').get(parseInt(user_id));
+    const coordinator = (await db.prepare('SELECT * FROM users WHERE id = ? AND role = "COORDINATOR"').get(parseInt(user_id)));
     if (!coordinator) {
         req.flash('error', 'Coordinator not found.');
         return res.redirect('/admin/pending-coordinators');
     }
 
-    const area = db.prepare('SELECT * FROM areas WHERE id = ?').get(parseInt(area_id));
+    const area = (await db.prepare('SELECT * FROM areas WHERE id = ?').get(parseInt(area_id)));
 
     // End any existing assignment
-    db.prepare(`
+    (await db.prepare(`
         UPDATE coordinator_area_assignments 
-        SET is_current = 0, ended_at = datetime('now') 
+        SET is_current = 0, ended_at = UTC_TIMESTAMP() 
         WHERE user_id = ? AND is_current = 1
-    `).run(coordinator.id);
+    `).run(coordinator.id));
 
     // Insert new assignment
-    db.prepare(`
+    (await db.prepare(`
         INSERT INTO coordinator_area_assignments (user_id, area_id, assigned_by, assigned_at, is_current, remarks)
-        VALUES (?, ?, ?, datetime('now'), 1, ?)
-    `).run(coordinator.id, area.id, user.id, remarks ? remarks.trim() : null);
+        VALUES (?, ?, ?, UTC_TIMESTAMP(), 1, ?)
+    `).run(coordinator.id, area.id, user.id, remarks ? remarks.trim() : null));
 
     // Update user status to active
-    db.prepare(`
+    (await db.prepare(`
         UPDATE users 
-        SET status = 'active', approved_by = ?, approved_at = datetime('now'), updated_at = datetime('now')
+        SET status = 'active', approved_by = ?, approved_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP()
         WHERE id = ?
-    `).run(user.id, coordinator.id);
+    `).run(user.id, coordinator.id));
 
-    logAction(user.id, 'APPROVE_COORDINATOR', 'users', coordinator.id, {
+    (await logAction(user.id, 'APPROVE_COORDINATOR', 'users', coordinator.id, {
         area_id: area.id,
         area_name: area.name,
         remarks
-    });
+    }));
 
-    createNotification(
+    (await createNotification(
         coordinator.id,
         'Account Approved!',
         `Your coordinator registration has been approved. You are assigned to: ${area.name}.`,
         '/dashboard'
-    );
+    ));
 
     try {
         await sendAccountApprovedEmail(coordinator.email, coordinator.full_name);
@@ -103,7 +103,7 @@ router.post('/approve-coordinator', requireAuth, requireAdminOrHR, async (req, r
 });
 
 // POST /admin/reject-coordinator (HR & ADMIN)
-router.post('/reject-coordinator', requireAuth, requireAdminOrHR, (req, res) => {
+router.post('/reject-coordinator', requireAuth, requireAdminOrHR, async (req, res) => {
     const user = req.session.user;
     const db = getDb();
     const { user_id, rejection_remarks } = req.body;
@@ -113,20 +113,20 @@ router.post('/reject-coordinator', requireAuth, requireAdminOrHR, (req, res) => 
         return res.redirect('/admin/pending-coordinators');
     }
 
-    db.prepare(`
+    (await db.prepare(`
         UPDATE users 
-        SET status = 'rejected', rejection_remarks = ?, updated_at = datetime('now')
+        SET status = 'rejected', rejection_remarks = ?, updated_at = UTC_TIMESTAMP()
         WHERE id = ?
-    `).run(rejection_remarks.trim(), parseInt(user_id));
+    `).run(rejection_remarks.trim(), parseInt(user_id)));
 
-    logAction(user.id, 'REJECT_COORDINATOR', 'users', parseInt(user_id), { remarks: rejection_remarks });
+    (await logAction(user.id, 'REJECT_COORDINATOR', 'users', parseInt(user_id), { remarks: rejection_remarks }));
 
     req.flash('success', 'Coordinator registration rejected.');
     res.redirect('/admin/pending-coordinators');
 });
 
 // POST /admin/reassign-coordinator (HR & ADMIN)
-router.post('/reassign-coordinator', requireAuth, requireAdminOrHR, (req, res) => {
+router.post('/reassign-coordinator', requireAuth, requireAdminOrHR, async (req, res) => {
     const user = req.session.user;
     const db = getDb();
     const { user_id, new_area_id, remarks } = req.body;
@@ -137,49 +137,49 @@ router.post('/reassign-coordinator', requireAuth, requireAdminOrHR, (req, res) =
     }
 
     const coordId = parseInt(user_id);
-    const newArea = db.prepare('SELECT * FROM areas WHERE id = ?').get(parseInt(new_area_id));
+    const newArea = (await db.prepare('SELECT * FROM areas WHERE id = ?').get(parseInt(new_area_id)));
 
     // End previous assignment while preserving history
-    db.prepare(`
+    (await db.prepare(`
         UPDATE coordinator_area_assignments 
-        SET is_current = 0, ended_at = datetime('now') 
+        SET is_current = 0, ended_at = UTC_TIMESTAMP() 
         WHERE user_id = ? AND is_current = 1
-    `).run(coordId);
+    `).run(coordId));
 
     // Create new assignment
-    db.prepare(`
+    (await db.prepare(`
         INSERT INTO coordinator_area_assignments (user_id, area_id, assigned_by, assigned_at, is_current, remarks)
-        VALUES (?, ?, ?, datetime('now'), 1, ?)
-    `).run(coordId, newArea.id, user.id, remarks ? remarks.trim() : 'Reassigned by HR');
+        VALUES (?, ?, ?, UTC_TIMESTAMP(), 1, ?)
+    `).run(coordId, newArea.id, user.id, remarks ? remarks.trim() : 'Reassigned by HR'));
 
-    logAction(user.id, 'REASSIGN_COORDINATOR', 'coordinator_area_assignments', null, {
+    (await logAction(user.id, 'REASSIGN_COORDINATOR', 'coordinator_area_assignments', null, {
         coordinator_id: coordId,
         new_area: newArea.name
-    });
+    }));
 
-    createNotification(
+    (await createNotification(
         coordId,
         'Assignment Updated',
         `Your assigned area has been updated to: ${newArea.name}.`,
         '/dashboard'
-    );
+    ));
 
     req.flash('success', `Coordinator reassigned to ${newArea.name}. History preserved.`);
     res.redirect('back');
 });
 
 // GET /admin/users (ADMIN only)
-router.get('/users', requireAuth, requireAdmin, (req, res) => {
+router.get('/users', requireAuth, requireAdmin, async (req, res) => {
     const db = getDb();
-    const users = db.prepare(`
+    const users = (await db.prepare(`
         SELECT u.*, a.name as current_area_name, caa.assigned_at as area_assigned_at
         FROM users u
         LEFT JOIN coordinator_area_assignments caa ON caa.user_id = u.id AND caa.is_current = 1
         LEFT JOIN areas a ON caa.area_id = a.id
         ORDER BY u.created_at DESC
-    `).all();
+    `).all());
 
-    const areas = db.prepare('SELECT * FROM areas WHERE is_active = 1 ORDER BY name ASC').all();
+    const areas = (await db.prepare('SELECT * FROM areas WHERE is_active = 1 ORDER BY name ASC').all());
 
     res.render('admin/users', {
         title: 'User Management - TAASCOR',
@@ -188,19 +188,22 @@ router.get('/users', requireAuth, requireAdmin, (req, res) => {
     });
 });
 
-// POST /admin/create-hr (ADMIN only)
-router.post('/create-hr', requireAuth, requireAdmin, (req, res) => {
+// POST /admin/create-hr (ADMIN only) — creates HR or HEAD_HR
+router.post('/create-hr', requireAuth, requireAdmin, async (req, res) => {
     const admin = req.session.user;
     const db = getDb();
-    const { email, password, full_name } = req.body;
+    const { email, password, full_name, role } = req.body;
 
     if (!email || !password || !full_name) {
         req.flash('error', 'All fields are required.');
         return res.redirect('/admin/users');
     }
 
+    const allowedRoles = ['HR', 'HEAD_HR'];
+    const assignedRole = allowedRoles.includes(role) ? role : 'HR';
+
     const trimmedEmail = email.trim().toLowerCase();
-    const existing = db.prepare('SELECT id FROM users WHERE email = ? COLLATE NOCASE').get(trimmedEmail);
+    const existing = (await db.prepare('SELECT id FROM users WHERE email = ?').get(trimmedEmail));
     if (existing) {
         req.flash('error', 'An account with that email already exists.');
         return res.redirect('/admin/users');
@@ -208,19 +211,19 @@ router.post('/create-hr', requireAuth, requireAdmin, (req, res) => {
 
     const hash = bcrypt.hashSync(password, 12);
 
-    db.prepare(`
+    (await db.prepare(`
         INSERT INTO users (email, password_hash, full_name, role, status, email_verified, must_change_password, created_at, updated_at)
-        VALUES (?, ?, ?, 'HR', 'active', 1, 1, datetime('now'), datetime('now'))
-    `).run(trimmedEmail, hash, full_name.trim());
+        VALUES (?, ?, ?, ?, 'active', 1, 1, UTC_TIMESTAMP(), UTC_TIMESTAMP())
+    `).run(trimmedEmail, hash, full_name.trim(), assignedRole));
 
-    logAction(admin.id, 'CREATE_HR_USER', 'users', null, { email: trimmedEmail });
+    (await logAction(admin.id, 'CREATE_USER', 'users', null, { email: trimmedEmail, role: assignedRole }));
 
-    req.flash('success', `HR account created for ${full_name} (${trimmedEmail}).`);
+    req.flash('success', `${assignedRole} account created for ${full_name} (${trimmedEmail}).`);
     res.redirect('/admin/users');
 });
 
 // POST /admin/users/:id/toggle-status (ADMIN only)
-router.post('/users/:id/toggle-status', requireAuth, requireAdmin, (req, res) => {
+router.post('/users/:id/toggle-status', requireAuth, requireAdmin, async (req, res) => {
     const admin = req.session.user;
     const db = getDb();
     const id = parseInt(req.params.id);
@@ -230,31 +233,31 @@ router.post('/users/:id/toggle-status', requireAuth, requireAdmin, (req, res) =>
         return res.redirect('/admin/users');
     }
 
-    const targetUser = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+    const targetUser = (await db.prepare('SELECT * FROM users WHERE id = ?').get(id));
     if (!targetUser) {
         req.flash('error', 'User not found.');
         return res.redirect('/admin/users');
     }
 
     const newStatus = targetUser.status === 'active' ? 'suspended' : 'active';
-    db.prepare("UPDATE users SET status = ?, updated_at = datetime('now') WHERE id = ?").run(newStatus, id);
+    (await db.prepare("UPDATE users SET status = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?").run(newStatus, id));
 
-    logAction(admin.id, 'TOGGLE_USER_STATUS', 'users', id, { newStatus });
+    (await logAction(admin.id, 'TOGGLE_USER_STATUS', 'users', id, { newStatus }));
 
     req.flash('success', `User ${targetUser.full_name} is now ${newStatus}.`);
     res.redirect('/admin/users');
 });
 
 // GET /admin/areas (ADMIN & HR)
-router.get('/areas', requireAuth, requireAdminOrHR, (req, res) => {
+router.get('/areas', requireAuth, requireAdminOrHR, async (req, res) => {
     const db = getDb();
-    const areas = db.prepare(`
+    const areas = (await db.prepare(`
         SELECT a.*,
                (SELECT COUNT(*) FROM employees WHERE area_id = a.id AND status = 'active') as active_workers,
                (SELECT u.full_name FROM coordinator_area_assignments caa JOIN users u ON caa.user_id = u.id WHERE caa.area_id = a.id AND caa.is_current = 1 LIMIT 1) as current_coordinator
         FROM areas a
         ORDER BY a.name ASC
-    `).all();
+    `).all());
 
     res.render('admin/areas', {
         title: 'Warehouses & Areas - TAASCOR',
@@ -263,7 +266,7 @@ router.get('/areas', requireAuth, requireAdminOrHR, (req, res) => {
 });
 
 // POST /admin/areas
-router.post('/areas', requireAuth, requireAdminOrHR, (req, res) => {
+router.post('/areas', requireAuth, requireAdminOrHR, async (req, res) => {
     const user = req.session.user;
     const db = getDb();
     const { name, description } = req.body;
@@ -274,12 +277,12 @@ router.post('/areas', requireAuth, requireAdminOrHR, (req, res) => {
     }
 
     try {
-        db.prepare(`
+        (await db.prepare(`
             INSERT INTO areas (name, description, is_active, created_at, created_by)
-            VALUES (?, ?, 1, datetime('now'), ?)
-        `).run(name.trim(), description ? description.trim() : null, user.id);
+            VALUES (?, ?, 1, UTC_TIMESTAMP(), ?)
+        `).run(name.trim(), description ? description.trim() : null, user.id));
 
-        logAction(user.id, 'CREATE_AREA', 'areas', null, { name: name.trim() });
+        (await logAction(user.id, 'CREATE_AREA', 'areas', null, { name: name.trim() }));
         req.flash('success', `Area "${name.trim()}" added successfully.`);
     } catch (e) {
         req.flash('error', 'An area with this name already exists.');
@@ -289,13 +292,13 @@ router.post('/areas', requireAuth, requireAdminOrHR, (req, res) => {
 });
 
 // GET /admin/positions (ADMIN & HR)
-router.get('/positions', requireAuth, requireAdminOrHR, (req, res) => {
+router.get('/positions', requireAuth, requireAdminOrHR, async (req, res) => {
     const db = getDb();
-    const positions = db.prepare(`
+    const positions = (await db.prepare(`
         SELECT p.*, (SELECT COUNT(*) FROM employees WHERE position_id = p.id AND status = 'active') as active_workers
         FROM positions p
         ORDER BY p.title ASC
-    `).all();
+    `).all());
 
     res.render('admin/positions', {
         title: 'Positions - TAASCOR',
@@ -304,7 +307,7 @@ router.get('/positions', requireAuth, requireAdminOrHR, (req, res) => {
 });
 
 // POST /admin/positions
-router.post('/positions', requireAuth, requireAdminOrHR, (req, res) => {
+router.post('/positions', requireAuth, requireAdminOrHR, async (req, res) => {
     const user = req.session.user;
     const db = getDb();
     const { title, description } = req.body;
@@ -315,12 +318,12 @@ router.post('/positions', requireAuth, requireAdminOrHR, (req, res) => {
     }
 
     try {
-        db.prepare(`
+        (await db.prepare(`
             INSERT INTO positions (title, description, is_active, created_at, created_by)
-            VALUES (?, ?, 1, datetime('now'), ?)
-        `).run(title.trim(), description ? description.trim() : null, user.id);
+            VALUES (?, ?, 1, UTC_TIMESTAMP(), ?)
+        `).run(title.trim(), description ? description.trim() : null, user.id));
 
-        logAction(user.id, 'CREATE_POSITION', 'positions', null, { title: title.trim() });
+        (await logAction(user.id, 'CREATE_POSITION', 'positions', null, { title: title.trim() }));
         req.flash('success', `Position "${title.trim()}" added successfully.`);
     } catch (e) {
         req.flash('error', 'A position with this title already exists.');
@@ -330,7 +333,7 @@ router.post('/positions', requireAuth, requireAdminOrHR, (req, res) => {
 });
 
 // GET /admin/audit-logs (ADMIN only)
-router.get('/audit-logs', requireAuth, requireAdmin, (req, res) => {
+router.get('/audit-logs', requireAuth, requireAdmin, async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = 50;
     const offset = (page - 1) * limit;
@@ -342,7 +345,7 @@ router.get('/audit-logs', requireAuth, requireAdmin, (req, res) => {
         dateTo: req.query.date_to || ''
     };
 
-    const { logs, total } = getAuditLogs(filters, limit, offset);
+    const { logs, total } = (await getAuditLogs(filters, limit, offset));
     const totalPages = Math.ceil(total / limit);
 
     res.render('admin/audit-logs', {
@@ -355,4 +358,12 @@ router.get('/audit-logs', requireAuth, requireAdmin, (req, res) => {
     });
 });
 
+router.get('/staff/:id', requireAuth, requireAdmin, async (req,res) => {
+ const db=getDb();
+ const staff=await db.prepare("SELECT id,full_name,email,role,status,phone,bio,profile_photo,created_at,last_login_at FROM users WHERE id=? AND role IN ('HR','HEAD_HR','COORDINATOR')").get(Number(req.params.id)||0);
+ if(!staff) return res.status(404).render('error',{title:'Staff not found',message:'Staff account not found.',code:404});
+ const attendance=await db.prepare('SELECT work_date,time_in,time_out FROM coordinator_attendance WHERE user_id=? ORDER BY work_date DESC LIMIT 30').all(staff.id);
+ const activities=await db.prepare('SELECT action,entity_type,entity_id,created_at FROM audit_logs WHERE user_id=? ORDER BY created_at DESC,id DESC LIMIT 50').all(staff.id);
+ res.render('admin/staff-profile',{title:'Staff Profile - TAASCOR',staff,attendance,activities});
+});
 module.exports = router;

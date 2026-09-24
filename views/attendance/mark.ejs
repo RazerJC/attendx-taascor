@@ -10,6 +10,8 @@
 <!-- ============================================================ -->
 <!-- 1. TOP COMMAND BAR: DATE, COUNTERS & ACTIONS (COMPACT)       -->
 <!-- ============================================================ -->
+<div class="page-header"><div><h2>Daily attendance</h2><p class="text-muted">Mark today's attendance here. Saved entries remain available in Attendance records.</p></div><a class="btn btn-outline" href="/reports">Attendance records</a></div>
+<p class="form-help" style="margin-bottom: 12px;"><strong><%= totalEmployees - summary.unrecorded %> saved records</strong> for <%= formattedFull %>. <a href="/reports?date_from=<%= workDate %>&amp;date_to=<%= workDate %><%= selectedAreaId ? '&area_id=' + selectedAreaId : '' %>">View saved attendance for this date</a></p>
 <div class="card p-2 mb-2 att-top-bar" style="border: 1px solid #e2e8f0; border-radius: 8px; background: white; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
     <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
         
@@ -81,7 +83,7 @@
                 ⚡ All Present
             </button>
             <button type="button" class="btn btn-primary btn-xs" onclick="document.getElementById('attendanceForm').requestSubmit()" style="font-weight: 700; font-size: 0.75rem; padding: 4px 12px; height: 28px; box-shadow: 0 1px 3px rgba(37,99,235,0.2);">
-                💾 Save (<span id="topPendingCount">0</span>)
+                💾 Save changes (<span id="topPendingCount">0</span> unsaved)
             </button>
         </div>
     </div>
@@ -160,9 +162,9 @@
         <% employees.forEach(emp => { 
             const currentStatus = emp.att_status ? (emp.att_status === 'on_leave' ? 'leave' : emp.att_status) : '';
         %>
-            <input type="hidden" name="attendance[<%= emp.id %>][status]" id="statusInput_<%= emp.id %>" data-status-input="<%= emp.id %>" value="<%= currentStatus %>">
+            <input type="hidden" name="attendance[e_<%= emp.id %>][status]" id="statusInput_<%= emp.id %>" data-status-input="<%= emp.id %>" value="<%= currentStatus %>">
             <% if (emp.schedule_id) { %>
-                <input type="hidden" name="attendance[<%= emp.id %>][schedule_id]" value="<%= emp.schedule_id %>">
+                <input type="hidden" name="attendance[e_<%= emp.id %>][schedule_id]" value="<%= emp.schedule_id %>">
             <% } %>
         <% }) %>
     </div>

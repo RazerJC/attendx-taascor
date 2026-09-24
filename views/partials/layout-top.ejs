@@ -3,17 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= typeof title !== 'undefined' ? title : 'TAASCOR Attendance Monitoring System' %></title>
+    <title><%= typeof title !== 'undefined' ? title : 'TAASCOR ETS' %></title>
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/workspace.css">
+    <link rel="stylesheet" href="/css/dashboard-theme.css">
+    <link rel="icon" href="/images/taascor-official-logo.png" type="image/png">
     <meta name="csrf-token" content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
 </head>
-<body>
+<body class="workspace-app <%= currentPath === '/dashboard' ? 'dashboard-page' : '' %>">
     <div class="app-layout">
         <%- include('sidebar') %>
         <div class="main-content">
             <%- include('header') %>
             
             <main class="page-content">
+                <% if (typeof needsCoordinatorTimeIn !== 'undefined' && needsCoordinatorTimeIn) { %>
+                    <div class="coordinator-time-reminder" role="alert">
+                        <div><strong>You haven't timed in today.</strong><p>Please record your time-in for today (Asia/Manila).</p></div>
+                        <a href="/coordinator-attendance" class="btn btn-primary btn-sm">Time in now</a>
+                    </div>
+                <% } %>
                 <!-- Flash Messages -->
                 <% if (typeof flash !== 'undefined') { %>
                     <% if (flash.success) { %>

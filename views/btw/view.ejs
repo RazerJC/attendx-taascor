@@ -12,37 +12,99 @@
         </div>
     </div>
     <div>
-        <%- include('../partials/status-badge', { status: btwCase.status }) %>
+        <button class="btn btn-outline" type="button" data-employee-status="<%= btwCase.employee_id %>"><%= btwCase.status === 'not_approved' ? 'Rejected' : btwCase.status.replace(/_/g, ' ') %> · View employee status</button>
     </div>
 </div>
 
-<!-- Highlighted Official Decision Box (Prompt Requirement) -->
-<% if (btwCase.status === 'approved') { %>
-    <div class="decision-box">
-        <h4 style="color: var(--color-success);">✓ Official HR Clearance Decision: APPROVED</h4>
-        <p><strong>Authorized Return Date:</strong> <span style="font-size: 1.1rem; color: var(--color-success); font-weight: 700;"><%= formatDate(btwCase.authorized_return_date) %></span></p>
-        <p><strong>Reviewer:</strong> <%= btwCase.hr_reviewer_name || 'HR Department' %> • <strong>Decided:</strong> <%= formatDateTime(btwCase.decision_at) %></p>
-        <% if (btwCase.hr_remarks) { %>
-            <p><strong>Official Remarks:</strong> <%= btwCase.hr_remarks %></p>
-        <% } %>
+<!-- Highlighted Official Decision Box -->
+<% if (btwCase.effective_action_type === 'suspension') { %>
+    <div class="decision-box <%= btwCase.status === 'not_approved' ? 'rejected' : '' %>" style="border-left: 5px solid #dc2626; background: #fff5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #fecaca;">
+        <h4 style="color: #dc2626; display: flex; align-items: center; gap: 8px; margin-top: 0; font-size: 1.15rem;">
+            🔴 Official HR Decision: <%= btwCase.status === 'approved' ? 'APPROVED WITH SUSPENSION' : 'NOT APPROVED (SUSPENDED)' %>
+        </h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 14px; background: #ffffff; padding: 14px; border-radius: 6px; border: 1px solid #fed7d7;">
+            <div>
+                <span class="text-xs text-muted" style="text-transform: uppercase; font-weight: 700; display: block;">Status</span>
+                <span class="badge badge-danger" style="font-weight: 800; margin-top: 4px; display: inline-block;">SUSPENDED</span>
+            </div>
+            <div>
+                <span class="text-xs text-muted" style="text-transform: uppercase; font-weight: 700; display: block;">Nilabag na Article</span>
+                <div style="font-weight: 700; color: #991b1b; margin-top: 4px; font-size: 0.9rem;">
+                    <%= btwCase.effective_article || 'Company Policy Code of Conduct' %>
+                </div>
+            </div>
+            <div>
+                <span class="text-xs text-muted" style="text-transform: uppercase; font-weight: 700; display: block;">Simula ng Suspension</span>
+                <div style="font-weight: 700; color: #dc2626; margin-top: 4px; font-size: 0.95rem;">
+                    <%= formatDate(btwCase.effective_suspension_start) %>
+                </div>
+            </div>
+            <div>
+                <span class="text-xs text-muted" style="text-transform: uppercase; font-weight: 700; display: block;">Huling Araw ng Suspension</span>
+                <div style="font-weight: 700; color: #b91c1c; margin-top: 4px; font-size: 0.95rem;">
+                    <%= formatDate(btwCase.effective_suspension_end) %>
+                </div>
+            </div>
+            <div>
+                <span class="text-xs text-muted" style="text-transform: uppercase; font-weight: 700; display: block;">Petsa ng Balik Trabaho</span>
+                <div style="font-weight: 800; color: #166534; font-size: 1.05rem; margin-top: 4px;">
+                    <%= formatDate(btwCase.effective_return_date) %>
+                </div>
+            </div>
+        </div>
+        <div style="margin-top: 12px; font-size: 0.95rem;">
+            <strong>Dahilan / Remarks:</strong> <%= btwCase.effective_hr_remarks || '—' %>
+        </div>
+        <div class="text-xs text-muted" style="margin-top: 8px;">
+            Reviewer: <strong><%= btwCase.hr_reviewer_name || 'HR Department' %></strong> • Decided: <%= formatDateTime(btwCase.decision_at) %>
+        </div>
+    </div>
+<% } else if (btwCase.status === 'approved') { %>
+    <div class="decision-box" style="border-left: 5px solid var(--color-success); background: #f0fdf4; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #bbf7d0;">
+        <h4 style="color: var(--color-success); margin-top: 0; font-size: 1.15rem;">✓ Official HR Clearance Decision: APPROVED (CLEARED)</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 14px; background: #ffffff; padding: 14px; border-radius: 6px; border: 1px solid #dcfce7;">
+            <div>
+                <span class="text-xs text-muted" style="text-transform: uppercase; font-weight: 700; display: block;">Status</span>
+                <span class="badge badge-success" style="font-weight: 700; margin-top: 4px; display: inline-block;">CLEARED / NOT SUSPENDED</span>
+            </div>
+            <% if (btwCase.effective_article) { %>
+                <div>
+                    <span class="text-xs text-muted" style="text-transform: uppercase; font-weight: 700; display: block;">Article / Policy</span>
+                    <div style="font-weight: 600; color: #1e293b; margin-top: 4px;"><%= btwCase.effective_article %></div>
+                </div>
+            <% } %>
+            <div>
+                <span class="text-xs text-muted" style="text-transform: uppercase; font-weight: 700; display: block;">Petsa ng Balik Trabaho</span>
+                <div style="font-size: 1.1rem; color: var(--color-success); font-weight: 800; margin-top: 4px;"><%= formatDate(btwCase.effective_return_date) %></div>
+            </div>
+        </div>
+        <div style="margin-top: 12px; font-size: 0.95rem;">
+            <strong>Dahilan / Remarks:</strong> <%= btwCase.effective_hr_remarks || 'Clearance approved for resumption of duties.' %>
+        </div>
+        <div class="text-xs text-muted" style="margin-top: 8px;">
+            Reviewer: <strong><%= btwCase.hr_reviewer_name || 'HR Department' %></strong> • Decided: <%= formatDateTime(btwCase.decision_at) %>
+        </div>
     </div>
 <% } else if (btwCase.status === 'not_approved') { %>
-    <div class="decision-box rejected">
-        <h4 style="color: var(--color-danger);">✕ Official HR Clearance Decision: NOT APPROVED</h4>
+    <div class="decision-box rejected" style="border-left: 5px solid var(--color-danger); background: #fef2f2; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #fecaca;">
+        <h4 style="color: var(--color-danger); margin-top: 0; font-size: 1.15rem;">✕ Official HR Clearance Decision: NOT APPROVED</h4>
+        <% if (btwCase.effective_article) { %>
+            <p><strong>Nilabag na Article:</strong> <span style="font-weight: 700; color: #991b1b;"><%= btwCase.effective_article %></span></p>
+        <% } %>
         <p><strong>Reviewer:</strong> <%= btwCase.hr_reviewer_name || 'HR Department' %> • <strong>Decided:</strong> <%= formatDateTime(btwCase.decision_at) %></p>
-        <% if (btwCase.hr_remarks) { %>
-            <p><strong>Official Remarks:</strong> <%= btwCase.hr_remarks %></p>
+        <% if (btwCase.effective_hr_remarks) { %>
+            <p><strong>Dahilan / Official Remarks:</strong> <%= btwCase.effective_hr_remarks %></p>
         <% } %>
     </div>
 <% } else if (btwCase.status === 'for_clarification') { %>
-    <div class="alert alert-warning">
+    <div class="alert alert-warning" style="margin-bottom: 20px;">
         <span class="alert-icon">⚠️</span>
         <div>
             <strong>Clarification Requested by HR:</strong> Please review the HR comments in the thread below and provide additional explanation.
         </div>
     </div>
 <% } else { %>
-    <div class="alert alert-info">
+    <div class="alert alert-info" style="margin-bottom: 20px;">
         <span class="alert-icon">ℹ️</span>
         <div>
             <strong>Pending HR Review:</strong> This clearance case is currently awaiting review and decision by the HR department.
@@ -86,41 +148,90 @@
 
 <!-- Authorized Decision Actions for HR / ADMIN -->
 <% if (user.role === 'HR' || user.role === 'ADMIN') { %>
-    <div class="card mb-3" style="border: 2px solid var(--color-primary);">
-        <div class="card-header" style="background: rgba(27,42,74,0.05);">
-            <h3>⚖️ HR Clearance Decision</h3>
+    <div class="card mb-3" style="border: 2px solid var(--color-primary, #1e3a8a); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+        <div class="card-header" style="background: rgba(30, 58, 138, 0.06); padding: 14px 20px;">
+            <h3 style="margin: 0; color: var(--color-primary, #1e3a8a);">⚖️ Official HR Clearance & Disciplinary Decision</h3>
             <span class="text-sm text-muted">Authorized for HR and Administrator roles only</span>
         </div>
-        <div class="card-body">
+        <div class="card-body" style="padding: 20px;">
             <form action="/btw/<%= btwCase.id %>/decision" method="POST">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
                 <div class="form-row">
-                    <div class="form-group">
+                    <div class="form-group" style="flex: 1;">
                         <label for="decision">Clearance Decision <span class="required">*</span></label>
                         <select id="decision" name="decision" class="form-control" onchange="toggleReturnDate(this.value)" required>
                             <option value="">— Select Decision —</option>
-                            <option value="approved" <%= btwCase.status === 'approved' ? 'selected' : '' %>>Approve Clearance</option>
-                            <option value="for_clarification" <%= btwCase.status === 'for_clarification' ? 'selected' : '' %>>Request Clarification</option>
-                            <option value="not_approved" <%= btwCase.status === 'not_approved' ? 'selected' : '' %>>Do Not Approve</option>
+                            <option value="approved" <%= btwCase.status === 'approved' ? 'selected' : '' %>>Approve Clearance (May Balik Trabaho)</option>
+                            <option value="for_clarification" <%= btwCase.status === 'for_clarification' ? 'selected' : '' %>>Request Clarification (Humingi ng Paliwanag)</option>
+                            <option value="not_approved" <%= btwCase.status === 'not_approved' ? 'selected' : '' %>>Do Not Approve (Tanggihan)</option>
                         </select>
                     </div>
 
-                    <div class="form-group" id="returnDateGroup">
-                        <label for="authorized_return_date">Authorized Return Date</label>
+                    <div class="form-group" id="returnDateGroup" style="flex: 1;">
+                        <label for="authorized_return_date">Petsa ng Balik Trabaho (Authorized Return Date) <span class="required">*</span></label>
                         <input type="date" id="authorized_return_date" name="authorized_return_date" class="form-control" 
-                               value="<%= btwCase.authorized_return_date || new Date().toISOString().split('T')[0] %>">
+                               value="<%= btwCase.effective_return_date || btwCase.authorized_return_date || '' %>">
                         <div class="form-help">Mandatory when clearance is approved.</div>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="hr_remarks">HR Remarks / Decision Justification</label>
-                    <textarea id="hr_remarks" name="hr_remarks" class="form-control" rows="2" placeholder="State clearance conditions, instructions, or findings..."><%= btwCase.hr_remarks || '' %></textarea>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="action_type">Aksyon / Suspended Ba?</label>
+                        <select class="form-control" id="action_type" name="action_type">
+                            <option value="none" <%= (!btwCase.effective_action_type || btwCase.effective_action_type === 'none') ? 'selected' : '' %>>Walang Suspension (Cleared / No Action)</option>
+                            <option value="suspension" <%= btwCase.effective_action_type === 'suspension' ? 'selected' : '' %>>🔴 Suspension (I-suspend ang Empleyado)</option>
+                            <option value="nte" <%= btwCase.effective_action_type === 'nte' ? 'selected' : '' %>>📄 NTE Issued (Notice to Explain)</option>
+                            <option value="warning" <%= btwCase.effective_action_type === 'warning' ? 'selected' : '' %>>⚠️ Written Warning Issued</option>
+                            <option value="violation" <%= btwCase.effective_action_type === 'violation' ? 'selected' : '' %>>📋 Policy Violation Recorded</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="issued_date">Petsa ng Paglabas ng Aksyon (Issue Date)</label>
+                        <input class="form-control" type="date" id="issued_date" name="issued_date">
+                    </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary">
-                    Record Official Decision
+                <!-- Nilabag na Article (Article Violated) -->
+                <div class="form-group">
+                    <label for="article_violated">Nilabag na Article / Company Rule Violated</label>
+                    <input type="text" id="article_violated" name="article_violated" list="articles_list" class="form-control" 
+                           placeholder="Pumili o mag-type ng nilabag na article (e.g., Article IV, Section 1 - AWOL)" 
+                           value="<%= btwCase.effective_article || '' %>">
+                    <datalist id="articles_list">
+                        <option value="Article IV, Section 1 - Habitual Absenteeism / AWOL"></option>
+                        <option value="Article IV, Section 2 - Habitual Tardiness / Undertime"></option>
+                        <option value="Article V, Section 1 - Insubordination / Failure to Follow Instructions"></option>
+                        <option value="Article VI, Section 2 - Serious Misconduct / Safety Violations"></option>
+                        <option value="Article VII, Section 1 - Abandonment of Post / Unauthorized Leave"></option>
+                        <option value="Article VIII, Section 3 - Dishonesty / Fraudulent Attendance Record"></option>
+                    </datalist>
+                    <div class="form-help">Ilagay ang partikular na artikulo o panuntunan ng kumpanya na nilabag ng empleyado.</div>
+                </div>
+
+                <!-- Suspension Date Fields -->
+                <div class="form-row" id="suspension-fields" style="<%= (btwCase.effective_action_type === 'suspension') ? '' : 'display: none;' %>">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="suspension_start">Petsa ng Simula ng Suspension <span class="required">*</span></label>
+                        <input class="form-control" type="date" id="suspension_start" name="suspension_start" 
+                               value="<%= btwCase.effective_suspension_start || '' %>">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="suspension_end">Petsa ng Tapos / Huling Araw ng Suspension <span class="required">*</span></label>
+                        <input class="form-control" type="date" id="suspension_end" name="suspension_end" 
+                               value="<%= btwCase.effective_suspension_end || '' %>">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="hr_remarks">Anong Dahilan / HR Findings & Remarks <span class="required">*</span></label>
+                    <textarea id="hr_remarks" name="hr_remarks" required class="form-control" rows="3" 
+                              placeholder="Ibigay ang kumpletong dahilan, kondisyon ng balik trabaho, o mga basehan ng desisyon..."><%= btwCase.effective_hr_remarks || btwCase.hr_remarks || '' %></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="font-weight: 700; padding: 10px 22px;">
+                    ⚖️ Record Official Decision
                 </button>
             </form>
         </div>
@@ -138,6 +249,15 @@
         }
     }
     toggleReturnDate(document.getElementById('decision').value);
+
+    document.getElementById('action_type').addEventListener('change', function () {
+        const isSuspension = this.value === 'suspension';
+        const suspFields = document.getElementById('suspension-fields');
+        suspFields.style.display = isSuspension ? 'flex' : 'none';
+        document.getElementById('issued_date').required = this.value !== 'none';
+        document.getElementById('suspension_start').required = isSuspension;
+        document.getElementById('suspension_end').required = isSuspension;
+    });
     </script>
 <% } %>
 

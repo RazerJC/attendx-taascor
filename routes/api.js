@@ -1,39 +1,40 @@
 const express = require('express');
 const router = express.Router();
 const { getDb } = require('../db/database');
-const { getUnreadCount, getNotifications } = require('../services/notification');
+const { getUnreadCount, getNotifications, getMenuGlow } = require('../services/notification');
 const { validateAreaAccess } = require('../middleware/area-guard');
 const { handleEmployeeAbsence } = require('../services/btw');
 const { logAction } = require('../services/audit');
 const { DateTime } = require('luxon');
 
 // GET /api/notifications/unread-count
-router.get('/notifications/unread-count', (req, res) => {
-    if (!req.session.user) return res.json({ count: 0 });
-    const count = getUnreadCount(req.session.user.id);
-    res.json({ count });
+router.get('/notifications/unread-count', async (req, res) => {
+    if (!req.session.user) return res.json({ count: 0, glow: {} });
+    const count = (await getUnreadCount(req.session.user.id));
+    const glow = (await getMenuGlow(req.session.user));
+    res.json({ count, glow });
 });
 
 // GET /api/notifications/latest
-router.get('/notifications/latest', (req, res) => {
+router.get('/notifications/latest', async (req, res) => {
     if (!req.session.user) return res.json({ notifications: [] });
-    const notifications = getNotifications(req.session.user.id, 6, 0);
+    const notifications = (await getNotifications(req.session.user.id, 6, 0));
     res.json({ notifications });
 });
 
 // GET /api/schedules/check-conflict
-router.get('/schedules/check-conflict', (req, res) => {
+router.get('/schedules/check-conflict', async (req, res) => {
     if (!req.session.user) return res.status(401).json({ error: 'Unauthorized' });
     const { employee_id, work_date } = req.query;
     if (!employee_id || !work_date) return res.json({ conflict: false });
 
     const db = getDb();
-    const existing = db.prepare(`
+    const existing = (await db.prepare(`
         SELECT es.*, e.full_name 
         FROM employee_schedules es
         JOIN employees e ON es.employee_id = e.id
         WHERE es.employee_id = ? AND es.work_date = ?
-    `).get(parseInt(employee_id), work_date);
+    `).get(parseInt(employee_id), work_date));
 
     if (existing) {
         return res.json({
@@ -50,7 +51,7 @@ router.get('/schedules/check-conflict', (req, res) => {
 // ==========================================
 
 // POST /api/departments/add
-router.post('/departments/add', (req, res) => {
+router.post('/departments/add', async (req, res) => {
     if (!req.session.user) return res.status(401).json({ success: false, error: 'Unauthorized' });
     const user = req.session.user;
     const db = getDb();
@@ -62,22 +63,22 @@ router.post('/departments/add', (req, res) => {
         return res.status(403).json({ success: false, error: 'Unauthorized area.' });
     }
 
-    const existing = db.prepare('SELECT id FROM departments WHERE area_id = ? AND name = ? COLLATE NOCASE').get(areaId, name);
+    const existing = (await db.prepare('SELECT id FROM departments WHERE area_id = ? AND name = ?').get(areaId, name));
     if (existing) {
         return res.status(400).json({ success: false, error: `Department "${name}" already exists.` });
     }
 
-    const result = db.prepare(`
+    const result = (await db.prepare(`
         INSERT INTO departments (area_id, name, created_by, created_at, updated_at)
-        VALUES (?, ?, ?, datetime('now'), datetime('now'))
-    `).run(areaId, name, user.id);
+        VALUES (?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())
+    `).run(areaId, name, user.id));
 
-    logAction(user.id, 'CREATE_DEPARTMENT', 'departments', result.lastInsertRowid, { name, area_id: areaId });
+    (await logAction(user.id, 'CREATE_DEPARTMENT', 'departments', result.lastInsertRowid, { name, area_id: areaId }));
     res.json({ success: true, id: result.lastInsertRowid, name, area_id: areaId });
 });
 
 // POST /api/departments/update
-router.post('/departments/update', (req, res) => {
+router.post('/departments/update', async (req, res) => {
     if (!req.session.user) return res.status(401).json({ success: false, error: 'Unauthorized' });
     const user = req.session.user;
     const db = getDb();
@@ -86,36 +87,36 @@ router.post('/departments/update', (req, res) => {
 
     if (!id || !name) return res.status(400).json({ success: false, error: 'ID and Name are required.' });
 
-    const dept = db.prepare('SELECT * FROM departments WHERE id = ?').get(id);
+    const dept = (await db.prepare('SELECT * FROM departments WHERE id = ?').get(id));
     if (!dept) return res.status(404).json({ success: false, error: 'Department not found.' });
     if (!validateAreaAccess(dept.area_id, req)) return res.status(403).json({ success: false, error: 'Access denied.' });
 
-    const duplicate = db.prepare('SELECT id FROM departments WHERE area_id = ? AND name = ? COLLATE NOCASE AND id != ?')
-        .get(dept.area_id, name, id);
+    const duplicate = (await db.prepare('SELECT id FROM departments WHERE area_id = ? AND name = ? AND id != ?')
+        .get(dept.area_id, name, id));
     if (duplicate) return res.status(400).json({ success: false, error: `Department "${name}" already exists.` });
 
-    db.prepare("UPDATE departments SET name = ?, updated_at = datetime('now') WHERE id = ?").run(name, id);
-    logAction(user.id, 'UPDATE_DEPARTMENT', 'departments', id, { old_name: dept.name, new_name: name });
+    (await db.prepare("UPDATE departments SET name = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?").run(name, id));
+    (await logAction(user.id, 'UPDATE_DEPARTMENT', 'departments', id, { old_name: dept.name, new_name: name }));
     res.json({ success: true, id, name });
 });
 
 // POST /api/departments/delete
-router.post('/departments/delete', (req, res) => {
+router.post('/departments/delete', async (req, res) => {
     if (!req.session.user) return res.status(401).json({ success: false, error: 'Unauthorized' });
     const user = req.session.user;
     const db = getDb();
     const id = parseInt(req.body.id);
 
     if (!id) return res.status(400).json({ success: false, error: 'Missing department ID.' });
-    const dept = db.prepare('SELECT * FROM departments WHERE id = ?').get(id);
+    const dept = (await db.prepare('SELECT * FROM departments WHERE id = ?').get(id));
     if (!dept) return res.status(404).json({ success: false, error: 'Department not found.' });
     if (!validateAreaAccess(dept.area_id, req)) return res.status(403).json({ success: false, error: 'Access denied.' });
 
-    const count = db.prepare('SELECT COUNT(*) as count FROM employees WHERE department_id = ?').get(id).count;
+    const count = (await db.prepare('SELECT COUNT(*) as count FROM employees WHERE department_id = ?').get(id)).count;
     if (count > 0) return res.status(400).json({ success: false, error: `Cannot delete department. It has ${count} employee(s) assigned.` });
 
-    db.prepare('DELETE FROM departments WHERE id = ?').run(id);
-    logAction(user.id, 'DELETE_DEPARTMENT', 'departments', id, { name: dept.name });
+    (await db.prepare('DELETE FROM departments WHERE id = ?').run(id));
+    (await logAction(user.id, 'DELETE_DEPARTMENT', 'departments', id, { name: dept.name }));
     res.json({ success: true });
 });
 
@@ -124,7 +125,7 @@ router.post('/departments/delete', (req, res) => {
 // ==========================================
 
 // POST /api/employees/update-department
-router.post('/employees/update-department', (req, res) => {
+router.post('/employees/update-department', async (req, res) => {
     if (!req.session.user) return res.status(401).json({ success: false, error: 'Unauthorized' });
     const user = req.session.user;
     const db = getDb();
@@ -132,26 +133,26 @@ router.post('/employees/update-department', (req, res) => {
     const departmentId = req.body.department_id ? parseInt(req.body.department_id) : null;
 
     if (!employeeId) return res.status(400).json({ success: false, error: 'Missing employee ID.' });
-    const employee = db.prepare('SELECT * FROM employees WHERE id = ?').get(employeeId);
+    const employee = (await db.prepare('SELECT * FROM employees WHERE id = ?').get(employeeId));
     if (!employee) return res.status(404).json({ success: false, error: 'Employee not found.' });
     if (!validateAreaAccess(employee.area_id, req)) return res.status(403).json({ success: false, error: 'Access denied.' });
 
     let deptName = 'Unassigned';
     if (departmentId) {
-        const dept = db.prepare('SELECT * FROM departments WHERE id = ?').get(departmentId);
+        const dept = (await db.prepare('SELECT * FROM departments WHERE id = ?').get(departmentId));
         if (!dept) return res.status(404).json({ success: false, error: 'Department not found.' });
         deptName = dept.name;
     }
 
-    db.prepare("UPDATE employees SET department_id = ?, updated_at = datetime('now'), updated_by = ? WHERE id = ?")
-        .run(departmentId, user.id, employeeId);
+    (await db.prepare("UPDATE employees SET department_id = ?, updated_at = UTC_TIMESTAMP(), updated_by = ? WHERE id = ?")
+        .run(departmentId, user.id, employeeId));
 
-    logAction(user.id, 'ASSIGN_EMPLOYEE_DEPARTMENT', 'employees', employeeId, { department_id: departmentId, department_name: deptName });
+    (await logAction(user.id, 'ASSIGN_EMPLOYEE_DEPARTMENT', 'employees', employeeId, { department_id: departmentId, department_name: deptName }));
     res.json({ success: true, employee_id: employeeId, department_id: departmentId, department_name: deptName });
 });
 
 // POST /api/employees/quick-update (Update name, position, department)
-router.post('/employees/quick-update', (req, res) => {
+router.post('/employees/quick-update', async (req, res) => {
     if (!req.session.user) return res.status(401).json({ success: false, error: 'Unauthorized' });
     const user = req.session.user;
     const db = getDb();
@@ -165,16 +166,16 @@ router.post('/employees/quick-update', (req, res) => {
         return res.status(400).json({ success: false, error: 'First and last name are required.' });
     }
 
-    const employee = db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
+    const employee = (await db.prepare('SELECT * FROM employees WHERE id = ?').get(id));
     if (!employee) return res.status(404).json({ success: false, error: 'Employee not found.' });
     if (!validateAreaAccess(employee.area_id, req)) return res.status(403).json({ success: false, error: 'Access denied.' });
 
     // Position handling
     let positionId = employee.position_id;
     if (positionTitle) {
-        let pos = db.prepare('SELECT id FROM positions WHERE title = ? COLLATE NOCASE').get(positionTitle);
+        let pos = (await db.prepare('SELECT id FROM positions WHERE title = ?').get(positionTitle));
         if (!pos) {
-            const pRes = db.prepare("INSERT INTO positions (title, is_active, created_by) VALUES (?, 1, ?)").run(positionTitle, user.id);
+            const pRes = (await db.prepare("INSERT INTO positions (title, is_active, created_by) VALUES (?, 1, ?)").run(positionTitle, user.id));
             positionId = pRes.lastInsertRowid;
         } else {
             positionId = pos.id;
@@ -182,34 +183,34 @@ router.post('/employees/quick-update', (req, res) => {
     }
 
     const fullName = `${firstName} ${lastName}`;
-    db.prepare(`
+    (await db.prepare(`
         UPDATE employees 
         SET first_name = ?, last_name = ?, full_name = ?, position_id = ?, 
-            department_id = COALESCE(?, department_id), updated_at = datetime('now'), updated_by = ?
+            department_id = COALESCE(?, department_id), updated_at = UTC_TIMESTAMP(), updated_by = ?
         WHERE id = ?
-    `).run(firstName, lastName, fullName, positionId, departmentId, user.id, id);
+    `).run(firstName, lastName, fullName, positionId, departmentId, user.id, id));
 
-    logAction(user.id, 'QUICK_UPDATE_EMPLOYEE', 'employees', id, { full_name: fullName, position: positionTitle, department_id: departmentId });
+    (await logAction(user.id, 'QUICK_UPDATE_EMPLOYEE', 'employees', id, { full_name: fullName, position: positionTitle, department_id: departmentId }));
     res.json({ success: true, id, first_name: firstName, last_name: lastName, full_name: fullName, position: positionTitle, department_id: departmentId });
 });
 
 // POST /api/employees/delete
-router.post('/employees/delete', (req, res) => {
+router.post('/employees/delete', async (req, res) => {
     if (!req.session.user) return res.status(401).json({ success: false, error: 'Unauthorized' });
     const user = req.session.user;
     const db = getDb();
     const id = parseInt(req.body.employee_id || req.body.id);
 
     if (!id) return res.status(400).json({ success: false, error: 'Missing employee ID.' });
-    const employee = db.prepare('SELECT * FROM employees WHERE id = ?').get(id);
+    const employee = (await db.prepare('SELECT * FROM employees WHERE id = ?').get(id));
     if (!employee) return res.status(404).json({ success: false, error: 'Employee not found.' });
     if (!validateAreaAccess(employee.area_id, req)) return res.status(403).json({ success: false, error: 'Access denied.' });
 
     // Soft delete or set inactive, or hard delete if no critical foreign keys
-    db.prepare("UPDATE employees SET status = 'inactive', inactivation_date = date('now'), inactivation_reason = 'Deleted by coordinator/HR', updated_at = datetime('now'), updated_by = ? WHERE id = ?")
-        .run(user.id, id);
+    (await db.prepare("UPDATE employees SET status = 'inactive', inactivation_date = UTC_DATE(), inactivation_reason = 'Deleted by coordinator/HR', updated_at = UTC_TIMESTAMP(), updated_by = ? WHERE id = ?")
+        .run(user.id, id));
 
-    logAction(user.id, 'DELETE_EMPLOYEE', 'employees', id, { full_name: employee.full_name });
+    (await logAction(user.id, 'DELETE_EMPLOYEE', 'employees', id, { full_name: employee.full_name }));
     res.json({ success: true, message: `Employee ${employee.full_name} marked inactive.` });
 });
 
@@ -218,7 +219,7 @@ router.post('/employees/delete', (req, res) => {
 // ==========================================
 
 // POST /api/attendance/save
-router.post('/attendance/save', (req, res) => {
+router.post('/attendance/save', async (req, res) => {
     if (!req.session.user) return res.status(401).json({ success: false, error: 'Unauthorized' });
     const user = req.session.user;
     const db = getDb();
@@ -234,15 +235,15 @@ router.post('/attendance/save', (req, res) => {
 
     const upsertStmt = db.prepare(`
         INSERT INTO employee_attendance (employee_id, schedule_id, work_date, status, time_in, time_out, remarks, recorded_by, recorded_at, version)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), 1)
-        ON CONFLICT(employee_id, work_date) DO UPDATE SET
-            schedule_id = excluded.schedule_id,
-            status = excluded.status,
-            time_in = excluded.time_in,
-            time_out = excluded.time_out,
-            remarks = excluded.remarks,
-            updated_by = excluded.recorded_by,
-            updated_at = datetime('now'),
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, UTC_TIMESTAMP(), 1)
+        ON DUPLICATE KEY UPDATE
+            schedule_id = VALUES(schedule_id),
+            status = VALUES(status),
+            time_in = VALUES(time_in),
+            time_out = VALUES(time_out),
+            remarks = VALUES(remarks),
+            updated_by = VALUES(recorded_by),
+            updated_at = UTC_TIMESTAMP(),
             version = version + 1
     `);
 
@@ -252,7 +253,7 @@ router.post('/attendance/save', (req, res) => {
         const status = (typeof data === 'string' ? data : (data.status || '')).toLowerCase();
         if (!validStatuses.includes(status)) continue;
 
-        const emp = db.prepare('SELECT area_id FROM employees WHERE id = ?').get(empId);
+        const emp = (await db.prepare('SELECT area_id FROM employees WHERE id = ?').get(empId));
         if (!emp || !validateAreaAccess(emp.area_id, req)) continue;
 
         const scheduleId = (typeof data === 'object' && data.schedule_id) ? parseInt(data.schedule_id) : null;
@@ -260,12 +261,12 @@ router.post('/attendance/save', (req, res) => {
         const timeOut = (typeof data === 'object' && data.time_out) ? data.time_out.trim() : null;
         const remarks = (typeof data === 'object' && data.remarks) ? data.remarks.trim() : null;
 
-        upsertStmt.run(empId, scheduleId, work_date, status, timeIn, timeOut, remarks, user.id);
+        (await upsertStmt.run(empId, scheduleId, work_date, status, timeIn, timeOut, remarks, user.id));
         saved++;
 
         if (status === 'absent') {
             try {
-                handleEmployeeAbsence(empId, work_date, user.id);
+                (await handleEmployeeAbsence(empId, work_date, user.id));
                 absentTriggered++;
             } catch (e) {
                 console.error('Error triggering BTW case:', e);
@@ -273,7 +274,7 @@ router.post('/attendance/save', (req, res) => {
         }
     }
 
-    logAction(user.id, 'SAVE_ATTENDANCE_API', 'employee_attendance', null, { work_date, saved_count: saved, absent_cases_created: absentTriggered });
+    (await logAction(user.id, 'SAVE_ATTENDANCE_API', 'employee_attendance', null, { work_date, saved_count: saved, absent_cases_created: absentTriggered }));
     res.json({ success: true, saved, absent_cases_created: absentTriggered, work_date });
 });
 

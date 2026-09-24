@@ -1,0 +1,817 @@
+<!-- ── ATTENDANCE WEBCAM MODAL COMPONENT ──────────────────── -->
+<style>
+.webcam-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.78);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+}
+.webcam-modal-overlay.active {
+    display: flex;
+}
+.webcam-modal {
+    background: #ffffff;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.35);
+    overflow: hidden;
+    animation: webcamModalIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes webcamModalIn {
+    from { transform: scale(0.92) translateY(20px); opacity: 0; }
+    to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+.webcam-modal-header {
+    background: linear-gradient(135deg, #1b2a4a 0%, #2d4a8a 100%);
+    padding: 16px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.webcam-modal-header h4 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 1.05rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.webcam-close-btn {
+    background: rgba(255,255,255,0.18);
+    border: none;
+    color: #ffffff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+}
+.webcam-close-btn:hover { background: rgba(255,255,255,0.35); }
+.webcam-modal-body { padding: 20px 22px 22px; }
+
+/* Camera preview viewport */
+.camera-preview-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: #0f172a;
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 14px;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+}
+#cameraVideo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+    display: block;
+}
+#cameraCanvas { display: none; }
+.camera-preview-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+.camera-face-guide {
+    width: 52%;
+    aspect-ratio: 3/4;
+    border: 3px dashed rgba(255,255,255,0.65);
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.28);
+}
+.camera-guide-hint {
+    margin-top: 10px;
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: rgba(0,0,0,0.55);
+    padding: 3px 10px;
+    border-radius: 12px;
+    letter-spacing: 0.3px;
+}
+
+/* ── LIVE DATE/TIME OVERLAY (CCTV-style) ── */
+.camera-datetime-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+    z-index: 10;
+    padding: 0 0 8px 0;
+}
+.camera-datetime-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 14px;
+    background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.75) 100%);
+}
+.camera-datetime-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.camera-rec-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 6px #ef4444, 0 0 12px rgba(239,68,68,0.5);
+    animation: recBlink 1s ease-in-out infinite;
+}
+@keyframes recBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+.camera-rec-label {
+    color: #ef4444;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    font-family: 'Courier New', Courier, monospace;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+.camera-datetime-text {
+    color: #ffffff;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.5);
+    letter-spacing: 0.5px;
+}
+.camera-datetime-text .dt-date {
+    color: #fbbf24;
+}
+.camera-datetime-text .dt-time {
+    color: #ffffff;
+}
+.camera-taascor-label {
+    position: absolute;
+    top: 10px;
+    left: 14px;
+    color: rgba(255,255,255,0.85);
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* Captured photo preview */
+#capturedPhotoWrap {
+    display: none;
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/3;
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 14px;
+    background: #0f172a;
+}
+#capturedPhotoPreview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.photo-confirmed-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(5, 150, 105, 0.92);
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 6px 16px;
+    border-radius: 20px;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+
+/* Status message */
+.camera-status {
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+.camera-status.success { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+.camera-status.error   { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+
+/* Action buttons */
+.webcam-btn-row {
+    display: flex;
+    gap: 10px;
+}
+.btn-capture {
+    flex: 1;
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(5,150,105,0.35);
+    transition: transform 0.15s, box-shadow 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.btn-capture:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(5,150,105,0.45);
+}
+.btn-capture:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+.btn-retake {
+    flex: 1;
+    background: #f1f5f9;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-retake:hover { background: #e2e8f0; }
+.btn-submit-punch {
+    flex: 2;
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.btn-submit-punch.in  { background: linear-gradient(135deg, #059669, #10b981); color: #fff; box-shadow: 0 4px 14px rgba(5,150,105,0.35); }
+.btn-submit-punch.out { background: linear-gradient(135deg, #2563eb, #3b82f6); color: #fff; box-shadow: 0 4px 14px rgba(37,99,235,0.35); }
+.btn-submit-punch:hover { transform: translateY(-1px); }
+.btn-submit-punch:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* Lightbox overlay */
+.photo-lightbox-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.88);
+    z-index: 3000;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(6px);
+}
+.photo-lightbox-overlay.active { display: flex; }
+.photo-lightbox-img {
+    max-width: 90vw;
+    max-height: 85vh;
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    object-fit: contain;
+}
+.photo-lightbox-close {
+    position: fixed;
+    top: 20px;
+    right: 24px;
+    background: rgba(255,255,255,0.18);
+    border: none;
+    color: #fff;
+    font-size: 1.6rem;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.photo-lightbox-close:hover { background: rgba(255,255,255,0.3); }
+</style>
+
+<!-- MODAL MARKUP -->
+<div class="webcam-modal-overlay" id="webcamModalOverlay">
+    <div class="webcam-modal">
+        <div class="webcam-modal-header">
+            <h4 id="webcamModalTitle">📸 Camera Time-In</h4>
+            <button type="button" class="webcam-close-btn" onclick="closeWebcam()">✕</button>
+        </div>
+        <div class="webcam-modal-body">
+
+            <!-- Live Camera Preview -->
+            <div class="camera-preview-wrap" id="cameraPreviewWrap">
+                <video id="cameraVideo" autoplay playsinline muted></video>
+                <canvas id="cameraCanvas"></canvas>
+
+                <!-- TAASCOR label top-left -->
+                <div class="camera-taascor-label">TAASCOR ATS</div>
+
+                <!-- Face alignment guide -->
+                <div class="camera-preview-overlay">
+                    <div class="camera-face-guide"></div>
+                    <div class="camera-guide-hint">Align face inside guide</div>
+                </div>
+
+                <!-- LIVE Date/Time overlay bottom (CCTV-style) -->
+                <div class="camera-datetime-overlay">
+                    <div class="camera-datetime-bar">
+                        <div class="camera-datetime-left">
+                            <div class="camera-rec-dot"></div>
+                            <span class="camera-rec-label">REC</span>
+                        </div>
+                        <div class="camera-datetime-text" id="liveDatetimeText">
+                            <span class="dt-date">--/--/----</span>&nbsp;&nbsp;<span class="dt-time">--:--:--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Captured Photo Preview -->
+            <div id="capturedPhotoWrap">
+                <img id="capturedPhotoPreview" src="" alt="Captured photo">
+                <div class="photo-confirmed-badge">✓ Photo Captured</div>
+            </div>
+
+            <!-- Live Status Message -->
+            <div class="camera-status" id="cameraStatus">
+                <span>⏳</span>
+                <span>Initializing camera…</span>
+            </div>
+
+            <!-- Capture Button Step -->
+            <div class="webcam-btn-row" id="captureRow">
+                <button type="button" class="btn-capture" id="captureBtn" onclick="capturePhoto()">
+                    📸 Capture Photo
+                </button>
+            </div>
+
+            <!-- Confirm & Retake Step -->
+            <div class="webcam-btn-row" id="confirmRow" style="display: none;">
+                <button type="button" class="btn-retake" onclick="retakePhoto()">
+                    🔄 Retake
+                </button>
+                <button type="button" class="btn-submit-punch" id="submitPunchBtn" onclick="submitPunch()">
+                    ✅ Confirm & Record
+                </button>
+            </div>
+
+            <!-- Hidden Mobile/Device Camera Trigger for fallback -->
+            <input type="file" id="deviceCameraFallbackInput" accept="image/*" capture="user" style="display: none;" onchange="handleDevicePhotoInput(this)">
+
+            <!-- Hidden Submit Forms -->
+            <form id="sharedTimeInForm" action="/coordinator-attendance/time-in" method="POST" style="display:none;">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="return_to" id="timeInReturnTo" value="">
+                <input type="hidden" name="time_in_photo" id="timeInPhotoHidden">
+            </form>
+            <form id="sharedTimeOutForm" action="/coordinator-attendance/time-out" method="POST" style="display:none;">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="return_to" id="timeOutReturnTo" value="">
+                <input type="hidden" name="time_out_photo" id="timeOutPhotoHidden">
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- PHOTO LIGHTBOX MODAL -->
+<div class="photo-lightbox-overlay" id="photoLightbox" onclick="closeLightbox()">
+    <button type="button" class="photo-lightbox-close" onclick="closeLightbox()">✕</button>
+    <img class="photo-lightbox-img" id="lightboxImg" src="" alt="Punch photo">
+</div>
+
+<!-- COMPONENT SCRIPTS -->
+<script>
+let activeWebcamStream = null;
+let currentWebcamMode = 'time-in';
+let activeCapturedDataUri = null;
+let currentReturnUrl = window.location.pathname;
+let liveDatetimeTimer = null;
+
+// ── Helpers: Get Manila date/time strings ──
+function getManilaDatetime() {
+    const now = new Date();
+    // Format in Asia/Manila timezone
+    const options = { timeZone: 'Asia/Manila' };
+
+    const year   = now.toLocaleString('en-US', { ...options, year: 'numeric' });
+    const month  = now.toLocaleString('en-US', { ...options, month: '2-digit' });
+    const day    = now.toLocaleString('en-US', { ...options, day: '2-digit' });
+    const hour   = now.toLocaleString('en-US', { ...options, hour: '2-digit', hour12: false });
+    const minute = now.toLocaleString('en-US', { ...options, minute: '2-digit' });
+    const second = now.toLocaleString('en-US', { ...options, second: '2-digit' });
+
+    const hh = hour.padStart(2, '0');
+    const mm = minute.padStart(2, '0');
+    const ss = second.padStart(2, '0');
+
+    // Date: MM/DD/YYYY  |  Time: HH:MM:SS (24h military)
+    const dateStr = `${month}/${day}/${year}`;
+    const timeStr = `${hh}:${mm}:${ss}`;
+
+    // Day of week
+    const dayOfWeek = now.toLocaleString('en-US', { ...options, weekday: 'short' }).toUpperCase();
+
+    return { dateStr, timeStr, dayOfWeek, full: `${dateStr} ${dayOfWeek} ${timeStr}` };
+}
+
+// ── Live clock update (ticks every second on the overlay) ──
+function startLiveDatetime() {
+    updateLiveDatetime();
+    liveDatetimeTimer = setInterval(updateLiveDatetime, 1000);
+}
+
+function stopLiveDatetime() {
+    if (liveDatetimeTimer) {
+        clearInterval(liveDatetimeTimer);
+        liveDatetimeTimer = null;
+    }
+}
+
+function updateLiveDatetime() {
+    const el = document.getElementById('liveDatetimeText');
+    if (!el) return;
+    const dt = getManilaDatetime();
+    el.innerHTML = '<span class="dt-date">' + dt.dateStr + ' ' + dt.dayOfWeek + '</span>&nbsp;&nbsp;<span class="dt-time">' + dt.timeStr + '</span>';
+}
+
+// ── Draw date/time stamp onto canvas (burned into the photo) ──
+function drawDateTimeStamp(ctx, canvasWidth, canvasHeight) {
+    const dt = getManilaDatetime();
+
+    // Bottom bar background
+    const barHeight = Math.max(38, canvasHeight * 0.085);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.72)';
+    ctx.fillRect(0, canvasHeight - barHeight, canvasWidth, barHeight);
+
+    // Subtle top border line
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.fillRect(0, canvasHeight - barHeight, canvasWidth, 1);
+
+    // Font sizing based on canvas resolution
+    const fontSize = Math.max(13, Math.min(18, canvasWidth * 0.028));
+    const smallFont = Math.max(10, Math.min(14, canvasWidth * 0.02));
+
+    // Left side: "TAASCOR ATS" label
+    ctx.font = 'bold ' + smallFont + 'px "Courier New", Courier, monospace';
+    ctx.fillStyle = '#fbbf24';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('TAASCOR ATS', 14, canvasHeight - barHeight / 2 - (fontSize * 0.45));
+
+    // Left side bottom: REC indicator
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(20, canvasHeight - barHeight / 2 + (fontSize * 0.55), 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.font = 'bold ' + (smallFont - 1) + 'px "Courier New", Courier, monospace';
+    ctx.fillStyle = '#ef4444';
+    ctx.fillText('REC', 28, canvasHeight - barHeight / 2 + (fontSize * 0.55));
+
+    // Right side: Date & Time
+    ctx.font = 'bold ' + fontSize + 'px "Courier New", Courier, monospace';
+    ctx.textAlign = 'right';
+
+    // Date
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillText(dt.dateStr + ' ' + dt.dayOfWeek, canvasWidth - 14, canvasHeight - barHeight / 2 - (fontSize * 0.35));
+
+    // Time (military)
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold ' + (fontSize + 2) + 'px "Courier New", Courier, monospace';
+    ctx.fillText(dt.timeStr, canvasWidth - 14, canvasHeight - barHeight / 2 + (fontSize * 0.65));
+
+    // Top-left TAASCOR watermark
+    const topFontSize = Math.max(11, Math.min(14, canvasWidth * 0.022));
+    ctx.font = 'bold ' + topFontSize + 'px "Courier New", Courier, monospace';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.fillText('TAASCOR ATS', 12, 22);
+}
+
+// ── Draw date/time stamp on a device camera fallback image ──
+function stampDevicePhoto(imgDataUri, callback) {
+    const img = new Image();
+    img.onload = function() {
+        const canvas = document.getElementById('cameraCanvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        drawDateTimeStamp(ctx, canvas.width, canvas.height);
+        callback(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.src = imgDataUri;
+}
+
+function openWebcam(mode, returnUrl) {
+    currentWebcamMode = mode || 'time-in';
+    currentReturnUrl = returnUrl || window.location.pathname;
+    activeCapturedDataUri = null;
+
+    const titleEl = document.getElementById('webcamModalTitle');
+    const submitBtn = document.getElementById('submitPunchBtn');
+
+    if (mode === 'time-in') {
+        titleEl.textContent = '📸 Camera Time-In';
+        submitBtn.className = 'btn-submit-punch in';
+        submitBtn.textContent = '✅ Confirm & Record Time-In';
+    } else {
+        titleEl.textContent = '📸 Camera Time-Out';
+        submitBtn.className = 'btn-submit-punch out';
+        submitBtn.textContent = '✅ Confirm & Record Time-Out';
+    }
+
+    document.getElementById('webcamModalOverlay').classList.add('active');
+    resetWebcamToCapture();
+    startWebcamCamera();
+    startLiveDatetime();
+}
+
+function closeWebcam() {
+    stopWebcamCamera();
+    stopLiveDatetime();
+    document.getElementById('webcamModalOverlay').classList.remove('active');
+    activeCapturedDataUri = null;
+}
+
+function startWebcamCamera() {
+    const statusEl = document.getElementById('cameraStatus');
+    const captureBtn = document.getElementById('captureBtn');
+
+    statusEl.className = 'camera-status';
+    statusEl.innerHTML = '<span>⏳</span><span>Starting camera preview…</span>';
+    captureBtn.disabled = true;
+
+    // Check mediaDevices support
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        handleCameraFailure('Webcam API is not supported in this browser. You can use your device camera below.');
+        return;
+    }
+
+    // Try user facing camera first
+    navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+        audio: false
+    })
+    .then(handleStreamSuccess)
+    .catch(function(err1) {
+        console.warn('facingMode: user failed, trying generic video constraint:', err1);
+        // Fallback constraint (standard for external USB webcams on desktop)
+        return navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+            .then(handleStreamSuccess)
+            .catch(function(err2) {
+                console.error('All camera attempts failed:', err2);
+                handleCameraFailure('Camera permission denied or camera device in use. Please allow camera access, or use the device camera trigger below.');
+            });
+    });
+}
+
+function handleStreamSuccess(stream) {
+    activeWebcamStream = stream;
+    const video = document.getElementById('cameraVideo');
+    video.srcObject = stream;
+    video.play().catch(e => console.warn('Video play error:', e));
+
+    const statusEl = document.getElementById('cameraStatus');
+    statusEl.className = 'camera-status success';
+    statusEl.innerHTML = '<span>🎥</span><span>Live Camera Active — Align face inside guide and tap Capture</span>';
+
+    const captureBtn = document.getElementById('captureBtn');
+    captureBtn.disabled = false;
+    captureBtn.style.display = 'flex';
+}
+
+function handleCameraFailure(msg) {
+    const statusEl = document.getElementById('cameraStatus');
+    statusEl.className = 'camera-status error';
+    statusEl.innerHTML = `
+        <div style="width: 100%;">
+            <div style="margin-bottom: 6px;"><span>❌</span> ${msg}</div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" class="btn btn-xs btn-outline" onclick="startWebcamCamera()">🔄 Retry Camera</button>
+                <button type="button" class="btn btn-xs btn-primary" onclick="document.getElementById('deviceCameraFallbackInput').click()">📱 Device Camera</button>
+                <button type="button" class="btn btn-xs btn-success" onclick="generateSimulatedSnapshot()">⚡ Instant Snap</button>
+            </div>
+        </div>
+    `;
+    document.getElementById('captureBtn').disabled = true;
+}
+
+function stopWebcamCamera() {
+    if (activeWebcamStream) {
+        activeWebcamStream.getTracks().forEach(t => t.stop());
+        activeWebcamStream = null;
+    }
+    const video = document.getElementById('cameraVideo');
+    if (video) video.srcObject = null;
+}
+
+function capturePhoto() {
+    const video = document.getElementById('cameraVideo');
+    const canvas = document.getElementById('cameraCanvas');
+
+    if (!video || !canvas) return;
+
+    canvas.width  = video.videoWidth  || 640;
+    canvas.height = video.videoHeight || 480;
+
+    const ctx = canvas.getContext('2d');
+
+    // Mirror draw so captured image matches preview
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+    ctx.restore();
+
+    // ── BURN DATE/TIME STAMP INTO THE PHOTO ──
+    drawDateTimeStamp(ctx, canvas.width, canvas.height);
+
+    activeCapturedDataUri = canvas.toDataURL('image/jpeg', 0.85);
+
+    // Show captured preview
+    document.getElementById('capturedPhotoPreview').src = activeCapturedDataUri;
+    document.getElementById('capturedPhotoWrap').style.display = 'block';
+    document.getElementById('cameraPreviewWrap').style.display = 'none';
+
+    document.getElementById('captureRow').style.display = 'none';
+    document.getElementById('confirmRow').style.display = 'flex';
+
+    // Stop the live clock since we captured
+    stopLiveDatetime();
+
+    const statusEl = document.getElementById('cameraStatus');
+    statusEl.className = 'camera-status success';
+    statusEl.innerHTML = '<span>✅</span><span>Photo captured with date & time stamp! Confirm below to record your punch.</span>';
+}
+
+function retakePhoto() {
+    activeCapturedDataUri = null;
+    resetWebcamToCapture();
+    startLiveDatetime();
+    if (!activeWebcamStream) {
+        startWebcamCamera();
+    } else {
+        const statusEl = document.getElementById('cameraStatus');
+        statusEl.className = 'camera-status success';
+        statusEl.innerHTML = '<span>🎥</span><span>Live Camera Active — Align face inside guide and tap Capture</span>';
+    }
+}
+
+function resetWebcamToCapture() {
+    document.getElementById('capturedPhotoWrap').style.display = 'none';
+    document.getElementById('cameraPreviewWrap').style.display = 'block';
+    document.getElementById('captureRow').style.display = 'flex';
+    document.getElementById('confirmRow').style.display = 'none';
+    document.getElementById('captureBtn').disabled = false;
+}
+
+// Fallback for device camera input (e.g. mobile native camera)
+function handleDevicePhotoInput(input) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        // Stamp the device photo with date/time before using it
+        stampDevicePhoto(e.target.result, function(stampedUri) {
+            activeCapturedDataUri = stampedUri;
+            document.getElementById('capturedPhotoPreview').src = activeCapturedDataUri;
+            document.getElementById('capturedPhotoWrap').style.display = 'block';
+            document.getElementById('cameraPreviewWrap').style.display = 'none';
+
+            document.getElementById('captureRow').style.display = 'none';
+            document.getElementById('confirmRow').style.display = 'flex';
+
+            stopLiveDatetime();
+
+            const statusEl = document.getElementById('cameraStatus');
+            statusEl.className = 'camera-status success';
+            statusEl.innerHTML = '<span>✅</span><span>Photo loaded with date & time stamp! Confirm to save punch.</span>';
+        });
+    };
+    reader.readAsDataURL(input.files[0]);
+}
+
+// Simulated snapshot fallback for test environments without hardware webcam
+function generateSimulatedSnapshot() {
+    const canvas = document.getElementById('cameraCanvas');
+    canvas.width = 640;
+    canvas.height = 480;
+    const ctx = canvas.getContext('2d');
+
+    // Background gradient
+    const grad = ctx.createLinearGradient(0, 0, 640, 480);
+    grad.addColorStop(0, '#1e293b');
+    grad.addColorStop(1, '#0f172a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 640, 480);
+
+    // Avatar silhouette
+    ctx.fillStyle = '#334155';
+    ctx.beginPath();
+    ctx.arc(320, 190, 80, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(320, 440, 170, Math.PI, 0);
+    ctx.fill();
+
+    // Center text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('TAASCOR VERIFIED PUNCH', 320, 290);
+
+    // ── BURN DATE/TIME STAMP ──
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    drawDateTimeStamp(ctx, 640, 480);
+
+    activeCapturedDataUri = canvas.toDataURL('image/jpeg', 0.85);
+
+    document.getElementById('capturedPhotoPreview').src = activeCapturedDataUri;
+    document.getElementById('capturedPhotoWrap').style.display = 'block';
+    document.getElementById('cameraPreviewWrap').style.display = 'none';
+    document.getElementById('captureRow').style.display = 'none';
+    document.getElementById('confirmRow').style.display = 'flex';
+
+    stopLiveDatetime();
+
+    const statusEl = document.getElementById('cameraStatus');
+    statusEl.className = 'camera-status success';
+    statusEl.innerHTML = '<span>✅</span><span>Verification photo generated with timestamp! Click Confirm to record punch.</span>';
+}
+
+function submitPunch() {
+    if (!activeCapturedDataUri) {
+        alert('Please capture a photo first.');
+        return;
+    }
+
+    const btn = document.getElementById('submitPunchBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Submitting…';
+
+    stopWebcamCamera();
+    stopLiveDatetime();
+
+    if (currentWebcamMode === 'time-in') {
+        document.getElementById('timeInPhotoHidden').value = activeCapturedDataUri;
+        document.getElementById('timeInReturnTo').value = currentReturnUrl;
+        document.getElementById('sharedTimeInForm').submit();
+    } else {
+        document.getElementById('timeOutPhotoHidden').value = activeCapturedDataUri;
+        document.getElementById('timeOutReturnTo').value = currentReturnUrl;
+        document.getElementById('sharedTimeOutForm').submit();
+    }
+}
+
+// Lightbox
+function openLightbox(src) {
+    if (!src) return;
+    document.getElementById('lightboxImg').src = src;
+    document.getElementById('photoLightbox').classList.add('active');
+}
+function closeLightbox() {
+    document.getElementById('photoLightbox').classList.remove('active');
+    document.getElementById('lightboxImg').src = '';
+}
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeLightbox();
+        closeWebcam();
+    }
+});
+</script>

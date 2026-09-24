@@ -3,70 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %> - TAASCOR</title>
-    <link rel="stylesheet" href="/css/style.css">
+    <title><%= typeof title !== 'undefined' ? title : 'Register - TAASCOR' %></title>
+    <link rel="icon" href="/images/taascor-official-logo.png" type="image/png">
+    <link rel="stylesheet" href="/css/login.css">
 </head>
-<body class="auth-page">
-    <div class="auth-card" style="max-width: 480px;">
-        <div class="auth-header">
-            <div class="auth-logo-badge">
-                <img src="/images/taascor-logo.png" alt="TAASCOR Logo">
-            </div>
-            <h1>Attendance Monitoring System</h1>
-            <p>Coordinator Registration</p>
-        </div>
+<body>
 
-        <div class="auth-body">
-            <h2>Create Coordinator Account</h2>
-            <p style="font-size: 0.82rem; color: var(--color-gray-500); margin-bottom: 20px; text-align: center;">
-                Requires an authorized company email ending in <strong>@taascor.com</strong>.
-            </p>
-
-            <% if (typeof flash !== 'undefined') { %>
-                <% if (flash.error) { %>
-                    <div class="alert alert-error"><%= flash.error %></div>
-                <% } %>
-            <% } %>
-
-            <form action="/register" method="POST">
+    <div class="container active" id="container">
+        <!-- Sign Up Form (Coordinator Registration) -->
+        <div class="form-container sign-up">
+            <form action="/register" method="POST" id="registerForm">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <img src="/images/taascor-logo.svg" alt="TAASCOR MANAGEMENT & GENERAL SERVICES CORP." class="brand-logo">
+                <h1>Sign Up</h1>
 
-                <div class="form-group">
-                    <label for="full_name">Full Name <span class="required">*</span></label>
-                    <input type="text" id="full_name" name="full_name" class="form-control" placeholder="e.g. Juan Dela Cruz" required autofocus>
+                <% if (typeof flash !== 'undefined' && flash.error) { %>
+                    <div class="auth-alert auth-alert-error"><%= flash.error %></div>
+                <% } %>
+                <% if (typeof flash !== 'undefined' && flash.success) { %>
+                    <div class="auth-alert auth-alert-success"><%= flash.success %></div>
+                <% } %>
+
+                <div class="input-box">
+                    <input type="text" name="full_name" placeholder="Full Name" required autofocus>
+                    <i class='bx bx-user'></i>
+                </div>
+                <div class="input-box">
+                    <input type="email" name="email" placeholder="Email (@taascor.com)" required>
+                    <i class='bx bx-envelope'></i>
+                </div>
+                <div class="form-help">Must end with @taascor.com</div>
+
+                <div class="input-box">
+                    <input type="password" id="registerPassword" name="password" placeholder="Password (min 8 chars)" minlength="8" required>
+                    <i class='bx bx-lock-alt'></i>
+                </div>
+                <div class="input-box">
+                    <input type="password" id="registerConfirmPassword" name="confirm_password" placeholder="Confirm Password" minlength="8" required>
+                    <i class='bx bx-check-shield'></i>
                 </div>
 
-                <div class="form-group">
-                    <label for="email">Company Email Address <span class="required">*</span></label>
-                    <input type="email" id="email" name="email" class="form-control" placeholder="firstname.lastname@taascor.com" required>
-                    <div class="form-help">Must end with @taascor.com. A verification link will be sent.</div>
+                <div class="options-row">
+                    <input type="checkbox" id="showRegisterPassword">
+                    <label for="showRegisterPassword">Show password</label>
                 </div>
 
-                <div class="form-group">
-                    <label for="password">System Password <span class="required">*</span></label>
-                    <input type="password" id="password" name="password" class="form-control" placeholder="At least 8 characters" required minlength="8">
-                    <div class="form-help">Do NOT enter your Hostinger mailbox password. Create a unique system password.</div>
-                </div>
+                <button type="submit" class="btn">Sign Up</button>
 
-                <div class="form-group">
-                    <label for="confirm_password">Confirm Password <span class="required">*</span></label>
-                    <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="Re-enter password" required minlength="8">
+                <div class="mobile-toggle">
+                    Already have an account? <a id="mobileLogin">Sign In</a>
                 </div>
-
-                <div style="background: var(--color-info-bg); border-left: 3px solid var(--color-info); padding: 10px 14px; border-radius: 4px; font-size: 0.78rem; color: #1E40AF; margin-bottom: 20px;">
-                    <strong>Note:</strong> All new registrations are created as <em>COORDINATOR</em> accounts in <em>Pending</em> status. HR must approve and assign your warehouse/area before system access is granted.
-                </div>
-
-                <button type="submit" class="btn btn-primary btn-block btn-lg">
-                    Register Coordinator Account
-                </button>
             </form>
         </div>
 
-        <div class="auth-footer">
-            <span>Already have an approved account?</span>
-            <a href="/login" style="margin-left: 6px;">Sign In</a>
+        <!-- Sign In Form (Login) -->
+        <div class="form-container sign-in">
+            <form action="/login" method="POST" id="loginForm">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <img src="/images/taascor-logo.svg" alt="TAASCOR MANAGEMENT & GENERAL SERVICES CORP." class="brand-logo">
+                <h1>Login</h1>
+
+                <div class="input-box">
+                    <input type="text" name="email" placeholder="Email or Username" required>
+                    <i class='bx bx-user'></i>
+                </div>
+                <div class="input-box">
+                    <input type="password" id="loginPassword" name="password" placeholder="Password" autocomplete="current-password" required>
+                    <i class='bx bx-lock-alt'></i>
+                </div>
+
+                <div class="options-row">
+                    <input type="checkbox" id="showLoginPassword">
+                    <label for="showLoginPassword">Show password</label>
+                </div>
+
+                <button type="submit" class="btn">Login</button>
+
+                <div class="forgot-link">
+                    <a href="/forgot-password">Forgot Password?</a>
+                </div>
+
+                <div class="mobile-toggle">
+                    Need an account? <a id="mobileRegister">Sign Up</a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Sliding Overlay Toggle Container -->
+        <div class="toggle-container">
+            <div class="toggle">
+                <div class="toggle-panel toggle-left">
+                    <h1 class="greet">Welcome Back!</h1>
+                    <p>Already have an account? Sign in with your approved company credentials.</p>
+                    <button type="button" class="btn-toggle" id="login">Sign In</button>
+                </div>
+                <div class="toggle-panel toggle-right">
+                    <h1 class="greet">Hello, Welcome!</h1>
+                    <p>Need an account?</p>
+                    <p>Contact your HRIS administrator or register as Coordinator.</p>
+                    <button type="button" class="btn-toggle" id="register">Sign Up</button>
+                </div>
+            </div>
         </div>
     </div>
+
+    <!-- Toggle & Password Visibility Script -->
+    <script>
+        const container = document.getElementById('container');
+        const registerBtn = document.getElementById('register');
+        const loginBtn = document.getElementById('login');
+        const mobileRegister = document.getElementById('mobileRegister');
+        const mobileLogin = document.getElementById('mobileLogin');
+
+        function showSignUp() {
+            container.classList.add("active");
+            if (window.location.pathname !== '/register') {
+                window.history.pushState({ tab: 'register' }, '', '/register');
+            }
+        }
+
+        function showSignIn() {
+            container.classList.remove("active");
+            if (window.location.pathname !== '/login') {
+                window.history.pushState({ tab: 'login' }, '', '/login');
+            }
+        }
+
+        registerBtn?.addEventListener('click', showSignUp);
+        loginBtn?.addEventListener('click', showSignIn);
+        mobileRegister?.addEventListener('click', showSignUp);
+        mobileLogin?.addEventListener('click', showSignIn);
+
+        window.addEventListener('popstate', () => {
+            if (window.location.pathname === '/register') {
+                container.classList.add("active");
+            } else {
+                container.classList.remove("active");
+            }
+        });
+
+        // Show/Hide Password for Login
+        document.getElementById('showLoginPassword')?.addEventListener('change', function () {
+            const password = document.getElementById('loginPassword');
+            if (password) password.type = this.checked ? 'text' : 'password';
+        });
+
+        // Show/Hide Password for Register
+        document.getElementById('showRegisterPassword')?.addEventListener('change', function () {
+            const pass = document.getElementById('registerPassword');
+            const confirmPass = document.getElementById('registerConfirmPassword');
+            const type = this.checked ? 'text' : 'password';
+            if (pass) pass.type = type;
+            if (confirmPass) confirmPass.type = type;
+        });
+    </script>
 </body>
 </html>

@@ -6,13 +6,12 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install production dependencies
-RUN npm ci --omit=dev || npm install --omit=dev
+RUN npm ci --omit=dev
 
 # Copy project files
 COPY . .
 
-# Ensure db directory has permissions
-RUN mkdir -p /app/db && chmod -R 777 /app/db
+# Runtime data is stored in MySQL, outside the deployment directory.
 
 ENV NODE_ENV=production
 ENV PORT=3000

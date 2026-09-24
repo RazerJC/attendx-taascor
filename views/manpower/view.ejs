@@ -16,6 +16,10 @@
     </div>
 </div>
 
+<div class="card mb-3"><div class="card-body"><strong>Assigned HR:</strong> <%= request.handler_name || 'Awaiting HR acceptance' %>
+<% if (user.role === 'HR' && !request.handler_name && !['filled','declined','cancelled'].includes(request.status)) { %>
+<form method="POST" action="/manpower/<%= request.id %>/claim"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-primary" type="submit">Accept & handle request</button></form>
+<% } %></div></div>
 <!-- Request Metrics Cards (Prompt Requirement: Separate display of requested, allocated, confirmed, remaining) -->
 <div class="summary-cards" style="margin-bottom: 20px;">
     <div class="summary-card" style="padding: 14px 18px;">

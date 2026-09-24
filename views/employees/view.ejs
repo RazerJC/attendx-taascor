@@ -11,7 +11,7 @@
             <span class="badge <%= employee.status === 'active' ? 'badge-success' : 'badge-secondary' %>"><%= employee.status.toUpperCase() %></span>
         </div>
     </div>
-    <div class="btn-group">
+    <div class="btn-group"><button type="button" class="btn btn-outline" data-employee-status="<%= employee.id %>">Employee / BTW status</button>
         <a href="/employees/<%= employee.id %>/edit" class="btn btn-outline">✏️ Edit Details</a>
         <a href="/concerns/new?employee_id=<%= employee.id %>" class="btn btn-outline">💬 Report Concern</a>
     </div>
